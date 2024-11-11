@@ -1,0 +1,64 @@
+{
+    "stepThresholds": [
+        {
+            "min": 0,
+            "max": 3000,
+            "coefficient": 0.8
+        },
+        {
+            "min": 3001,
+            "max": 6000,
+            "coefficient": 1.0
+        },
+        {
+            "min": 6001,
+            "max": 9000,
+            "coefficient": 1.2
+        },
+        {
+            "min": 9001,
+            "max": 12000,
+            "coefficient": 1.5
+        }
+    ],
+    "timeThresholds": [
+        {
+            "min": 0,
+            "max": 30,
+            "coefficient": 0.5
+        },
+        {
+            "min": 31,
+            "max": 60,
+            "coefficient": 1.0
+        },
+        {
+            "min": 61,
+            "max": 120,
+            "coefficient": 1.5
+        },
+        {
+            "min": 121,
+            "max": null,
+            "coefficient": 2.0
+        }
+    ],
+    "heartRateThresholds": [
+        {
+            "min": 0,
+            "max": 60,
+            "coefficient": 0.75
+        },
+        {
+            "min": 61,
+            "max": 80,
+            "coefficient": 1.0
+        },
+        {
+            "min": 81,
+            "max": null,
+            "coefficient": 1.25
+        }
+    ],
+    "sparkCoefficient": 1000000
+}

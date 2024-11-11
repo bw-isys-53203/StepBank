@@ -1,0 +1,303 @@
+/* dashboard.css */
+/* Parent Dashboard Specific Styles */
+.parent-controls {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.child-selector {
+    margin-bottom: 20px;
+}
+
+.child-selector select {
+    width: 200px;
+    padding: 8px;
+    background-color: var(--button-bg);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-primary);
+}
+
+.goal-settings {
+    background-color: var(--button-bg);
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.goal-form {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    margin-top: 10px;
+}
+
+.goal-input {
+    width: 120px;
+    padding: 8px;
+    background-color: var(--card-bg);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-primary);
+}
+
+.children-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.child-card {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.approval-requests {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.approval-list {
+    margin-top: 15px;
+}
+
+.approval-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: var(--button-bg);
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.approval-details {
+    display: flex;
+    gap: 15px;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.approve-btn {
+    background-color: #4CAF50;
+}
+
+.deny-btn {
+    background-color: var(--primary-color);
+}
+
+/* Child Dashboard Specific Styles */
+.progress-container {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0;
+    min-height: 220px;
+}
+
+.spark-circle {
+    width: 200px;
+    height: 200px;
+    position: relative;
+}
+
+.progress-ring {
+    width: 100%;
+    height: 100%;
+}
+
+.sparks-info {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.total-sparks {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.total-sparks .label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.total-sparks .value {
+    font-size: 32px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+/* Update spark circle text */
+.spark-count {
+    font-size: 28px;
+    fill: var(--text-primary);
+    font-weight: bold;
+}
+
+.spark-label {
+    font-size: 12px;
+    fill: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 20px 20px 30px 20px;
+    padding-top: 20px;
+}
+
+.metric-card {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.metric-label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 30px 0 80px 0;
+    padding: 0 20px;
+}
+
+.primary-btn {
+    width: 120px;
+    height: 200px;
+    padding: 15px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.primary-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background-color: var(--card-bg);
+    padding: 15px;
+    gap: 10px;
+    z-index: 100;
+}
+
+.nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.nav-btn:hover {
+    color: var(--text-primary);
+}
+
+.sparkle-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background-color: #FFD700;
+    border-radius: 50%;
+    animation: sparkle 1s ease-out forwards;
+}
+
+@keyframes sparkle {
+    0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(2) rotate(180deg);
+        opacity: 0;
+    }
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .goal-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .approval-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .approval-details {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        margin: 20px 10px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .primary-btn {
+        width: 90%;
+        height: 100px;
+    }
+}

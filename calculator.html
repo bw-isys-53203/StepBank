@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark Calculator</title>
+    <style>
+        body {
+            background-color: #15171E;
+            color: #FFFFFF;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .calculator-form {
+            background-color: #1E2028;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #A1A1AA;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            background-color: #2A2D37;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: #FFFFFF;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #FF4B4B;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .results {
+            background-color: #1E2028;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .results.visible {
+            display: block;
+        }
+
+        .coefficient-detail {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #2A2D37;
+            border-radius: 6px;
+        }
+
+        .final-result {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FF4B4B;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spark Calculator</h1>
+    
+    <div class="calculator-form">
+        <div class="input-group">
+            <label>Steps:</label>
+            <input type="number" id="steps" placeholder="Enter number of steps">
+        </div>
+        
+        <div class="input-group">
+            <label>Active Time (minutes):</label>
+            <input type="number" id="time" placeholder="Enter active time in minutes">
+        </div>
+        
+        <div class="input-group">
+            <label>Average Heart Rate:</label>
+            <input type="number" id="heartRate" placeholder="Enter average heart rate">
+        </div>
+        
+        <button onclick="calculateSparks()">Calculate Sparks</button>
+    </div>
+
+    <div id="results" class="results">
+        <h2>Calculation Details</h2>
+        <div class="coefficient-detail">
+            <h3>Steps</h3>
+            <p>Value: <span id="stepsValue"></span></p>
+            <p>Coefficient: <span id="stepsCoef"></span></p>
+            <p>Result: <span id="stepsResult"></span></p>
+        </div>
+        
+        <div class="coefficient-detail">
+            <h3>Time</h3>
+            <p>Value: <span id="timeValue"></span> minutes</p>
+            <p>Coefficient: <span id="timeCoef"></span></p>
+            <p>Result: <span id="timeResult"></span></p>
+        </div>
+        
+        <div class="coefficient-detail">
+            <h3>Heart Rate</h3>
+            <p>Value: <span id="hrValue"></span> BPM</p>
+            <p>Coefficient: <span id="hrCoef"></span></p>
+            <p>Result: <span id="hrResult"></span></p>
+        </div>
+        
+        <div class="coefficient-detail">
+            <h3>Big Number Calculation</h3>
+            <p>Formula: (Steps × StepsCoef) × (Time × TimeCoef) × (HR × HRCoef)</p>
+            <p>Big Number: <span id="bigNumber"></span></p>
+            <p>Spark Coefficient: <span id="sparkCoef"></span></p>
+        </div>
+
+        <div class="final-result">
+            Final Spark Points: <span id="finalSparks"></span>
+        </div>
+    </div>
+
+    <script>
+        // Load the config immediately
+        const config = {
+            stepThresholds: [
+                { min: 0, max: 3000, coefficient: 0.8 },
+                { min: 3001, max: 6000, coefficient: 1.0 },
+                { min: 6001, max: 9000, coefficient: 1.2 },
+                { min: 9001, max: 12000, coefficient: 1.5 }
+            ],
+            timeThresholds: [
+                { min: 0, max: 30, coefficient: 0.5 },
+                { min: 31, max: 60, coefficient: 1.0 },
+                { min: 61, max: 120, coefficient: 1.5 },
+                { min: 121, max: null, coefficient: 2.0 }
+            ],
+            heartRateThresholds: [
+                { min: 0, max: 60, coefficient: 0.75 },
+                { min: 61, max: 80, coefficient: 1.0 },
+                { min: 81, max: null, coefficient: 1.25 }
+            ],
+            sparkCoefficient: 1000000
+        };
+
+        function getCoefficient(value, thresholds) {
+            for (const threshold of thresholds) {
+                if (value >= threshold.min && 
+                    (threshold.max === null || value <= threshold.max)) {
+                    return threshold.coefficient;
+                }
+            }
+            return 1.0;
+        }
+
+        function calculateSparks() {
+            // Get input values
+            const steps = parseInt(document.getElementById('steps').value) || 0;
+            const time = parseInt(document.getElementById('time').value) || 0;
+            const heartRate = parseInt(document.getElementById('heartRate').value) || 0;
+
+            // Calculate coefficients
+            const stepsCoef = getCoefficient(steps, config.stepThresholds);
+            const timeCoef = getCoefficient(time, config.timeThresholds);
+            const heartRateCoef = getCoefficient(heartRate, config.heartRateThresholds);
+
+            // Calculate intermediate values
+            const stepsResult = steps * stepsCoef;
+            const timeResult = time * timeCoef;
+            const hrResult = heartRate * heartRateCoef;
+
+            // Calculate big number
+            const bigNumber = stepsResult * timeResult * hrResult;
+
+            // Calculate final sparks
+            const sparkPoints = Math.floor(bigNumber / config.sparkCoefficient);
+
+            // Update display
+            document.getElementById('stepsValue').textContent = steps.toLocaleString();
+            document.getElementById('stepsCoef').textContent = stepsCoef;
+            document.getElementById('stepsResult').textContent = stepsResult.toLocaleString();
+
+            document.getElementById('timeValue').textContent = time;
+            document.getElementById('timeCoef').textContent = timeCoef;
+            document.getElementById('timeResult').textContent = timeResult.toLocaleString();
+
+            document.getElementById('hrValue').textContent = heartRate;
+            document.getElementById('hrCoef').textContent = heartRateCoef;
+            document.getElementById('hrResult').textContent = hrResult.toLocaleString();
+
+            document.getElementById('bigNumber').textContent = bigNumber.toLocaleString();
+            document.getElementById('sparkCoef').textContent = config.sparkCoefficient.toLocaleString();
+            document.getElementById('finalSparks').textContent = sparkPoints.toLocaleString();
+
+            // Show results
+            document.getElementById('results').classList.add('visible');
+        }
+    </script>
+</body>
+</html>
