@@ -15,9 +15,8 @@ class ElectronicsManager {
     }
 
     loadAvailableTime() {
-        // In a real app, this would come from API/database
-        // For now, calculate based on sparks
-        const sparks = window.dashboardManager.calculateSparks();
+        // Calculate based on sparks
+        const sparks = window.dashboardManager.calculateCurrentDaySparks();
         this.timeAvailable = Math.floor(sparks / 10); // 10 sparks = 1 minute
     }
 
@@ -122,7 +121,7 @@ class ElectronicsManager {
 
             <div class="conversion-display">
                 <div class="currency-circle">
-                    <div class="value">${window.dashboardManager.calculateSparks()}</div>
+                    <div class="value">${window.dashboardManager.calculateCurrentDaySparks()}</div>
                     <div class="label">SPARKS</div>
                 </div>
                 <div class="equals-sign">=</div>
