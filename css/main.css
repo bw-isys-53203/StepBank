@@ -1,11 +1,14 @@
 /* main.css */
 :root {
-    --primary-color: #FF4B4B;
-    --dark-bg: #15171E;
-    --card-bg: #1E2028;
-    --text-primary: #FFFFFF;
-    --text-secondary: #A1A1AA;
-    --button-bg: #2A2D37;
+    --primary-color: #4CAF50;
+    --dark-bg: #E8F5E9;  /* Light green background */
+    --card-bg: #C8E6C9;  /* Lighter green for cards */
+    --text-primary: #2C3E50;
+    --text-secondary: #537155;
+    --button-bg: #FFFFFF; /* White for text boxes/buttons */
+    --button-hover: #43A047;
+    --error-color: #E57373;
+    --success-color: #81C784;
 }
 
 * {
@@ -27,6 +30,14 @@ body {
     padding: 20px;
 }
 
+.form-group input[type="text"],
+.form-group input[type="password"],
+.search-input,
+.goal-input,
+.child-selector select {
+    background-color: #FFFFFF;
+}
+
 .btn {
     padding: 12px 24px;
     background-color: var(--primary-color);
@@ -40,6 +51,25 @@ body {
 
 .btn:hover {
     opacity: 0.9;
+    background-color: var(--button-hover);
+}
+
+.balance-card {
+    background: linear-gradient(135deg, var(--primary-color), #81C784);
+}
+
+.auth-form, .parent-controls, .child-card, .approval-requests,
+.sparks-info, .metric-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.progress-ring path {
+    stroke: var(--primary-color);
+}
+
+.bottom-nav {
+    background-color: white;
+    box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .hidden {
