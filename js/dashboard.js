@@ -13,12 +13,22 @@ class DashboardManager {
             minutes: 0,
             heartRate: 0
         };
+        this.currentMetric = 'steps';
+        this.switchMetric = this.switchMetric.bind(this);
     }
 
     async initialize(user) {
         this.currentUser = user;
         await this.loadConfig();
-        this.generateNewActivityData(); // Generate initial values
+        
+        // Generate and store separate data for each child
+        if (!this.storedActivityData) {
+            this.storedActivityData = {
+                child1: this.generateMockActivities(1),     // Tommy's data
+                child2: this.generateMockActivities(1.5)    // Sarah's data with 1.5x multiplier
+            };
+        }
+    
         this.loadDashboardData();
         this.setupEventListeners();
         this.renderDashboard();
@@ -41,13 +51,10 @@ class DashboardManager {
         });
     }
 
-    generateNewActivityData() {
-        this.currentActivityData = {
-            steps: this.generateSteps(),
-            minutes: this.generateMinutes(),
-            heartRate: this.generateHeartRate()
-        };
-        console.log('Generated new activity data:', this.currentActivityData);
+    formatActiveTime(minutes) {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
     }
 
     generateSteps() {
@@ -68,15 +75,65 @@ class DashboardManager {
         return baseHR + (Math.random() > 0.7 ? extraHR : 0);
     }
 
+    renderMetricControls() {
+        return `
+            <div class="metric-controls">
+                <button class="btn metric-btn ${this.currentMetric === 'steps' ? 'active' : ''}" 
+                        onclick="window.dashboardManager.switchMetric('steps')">
+                    Steps
+                </button>
+                <button class="btn metric-btn ${this.currentMetric === 'activeTime' ? 'active' : ''}" 
+                        onclick="window.dashboardManager.switchMetric('activeTime')">
+                    Active Time
+                </button>
+                <button class="btn metric-btn ${this.currentMetric === 'heartRate' ? 'active' : ''}" 
+                        onclick="window.dashboardManager.switchMetric('heartRate')">
+                    Heart Rate
+                </button>
+            </div>
+        `;
+    }
+    
+    switchMetric(metric) {
+        console.log('Switching to metric:', metric);
+        this.currentMetric = metric;
+        
+        // Re-render the entire parent dashboard to update the buttons
+        this.renderDashboard();
+        
+        // Update chart after re-render
+        if (this.selectedChildId) {
+            this.updateChart(this.selectedChildId);
+        }
+    }
+    
     async loadDashboardData() {
         this.activities = this.generateMockActivities();
         
         if (this.currentUser.isParent) {
+            // Simulate loading children data for parent
             this.children = [
-                { id: 'child1', username: 'Tommy', age: 10, dailyGoal: 10000 },
-                { id: 'child2', username: 'Sarah', age: 8, dailyGoal: 8000 }
+                { 
+                    id: 'child1', 
+                    username: 'Tommy', 
+                    age: 10, 
+                    dailyGoal: 10000,
+                    activeTimeGoal: 60,    // 60 minutes
+                    heartRateGoal: 90      // 90 BPM
+                },
+                { 
+                    id: 'child2', 
+                    username: 'Sarah', 
+                    age: 8, 
+                    dailyGoal: 8000,
+                    activeTimeGoal: 45,    // 45 minutes
+                    heartRateGoal: 85      // 85 BPM
+                }
             ];
+            // Set initial selected child
             this.selectedChildId = this.children[0].id;
+            console.log("Loaded children data:", this.children);
+            console.log("Set initial selectedChildId:", this.selectedChildId);
         }
     }
 
@@ -163,11 +220,6 @@ class DashboardManager {
         return 0;
     }
 
-    refreshActivityData() {
-        this.generateNewActivityData();
-        this.renderDashboard();
-    }
-
     renderDashboard() {
         const dashboardContainer = document.getElementById('dashboard');
         
@@ -188,7 +240,10 @@ class DashboardManager {
     }
 
     renderParentDashboard(container) {
+        console.log("rendering parent dashboard with selectedChildId:", this.selectedChildId);
+        console.log("children array:", this.children);
         const selectedChild = this.children.find(child => child.id === this.selectedChildId);
+        
         if (!selectedChild) return;
 
         container.innerHTML = `
@@ -198,8 +253,9 @@ class DashboardManager {
                     <span>Parent Dashboard</span>
                 </div>
                 <div class="nav-buttons">
-                    <button class="btn" onclick="showSection('rewards')">Manage Rewards</button>
-                    <button class="btn" onclick="showSection('marketplace')">Marketplace</button>
+               <!--     <button class="btn" onclick="showSection('rewards')">Manage Rewards</button>
+                    <button class="btn" onclick="showSection('marketplace')">Marketplace</button> -->
+                    <button class="btn" onclick="showSection('pendingApprovals')">Approvals</button>
                     <button class="btn" onclick="handleLogout()">Logout</button>
                 </div>
             </nav>
@@ -216,47 +272,56 @@ class DashboardManager {
                     </select>
                 </div>
 
-                <div class="goal-settings">
-                    <h3>Daily Goals</h3>
-                    <div class="goal-form">
-                        <div class="form-group">
-                            <label>Steps Goal:</label>
-                            <input type="number" class="goal-input" id="stepsGoal" 
-                                value="${selectedChild.dailyGoal}">
-                        </div>
-                        <button class="btn update-goals-btn">Update Goals</button>
+            <div class="goal-settings">
+                <h3>Daily Goals</h3>
+                <div class="goal-form">
+                    <div class="form-group">
+                        <label>Steps Goal:</label>
+                        <input type="number" class="goal-input" id="stepsGoal" 
+                            value="${selectedChild.dailyGoal || 10000}">
+                    </div>
+                    <div class="form-group">
+                        <label>Active Time Goal (minutes):</label>
+                        <input type="number" class="goal-input" id="activeTimeGoal" 
+                            value="${selectedChild.activeTimeGoal || 60}">
+                    </div>
+                    <div class="form-group">
+                        <label>Heart Rate Goal (BPM):</label>
+                        <input type="number" class="goal-input" id="heartRateGoal" 
+                            value="${selectedChild.heartRateGoal || 90}">
+                    </div>
+                    <button class="btn update-goals-btn">Update Goals</button>
+                </div>
+            </div>
+            <div class="metrics-overview">
+                <h3>Current Activity Stats</h3>
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">Steps</div>
+                        <div class="metric-value">${this.getChildStats(selectedChild.id).totalSteps.toLocaleString()}</div>
+                        <div class="metric-progress">${Math.min(this.getChildStats(selectedChild.id).progress, 100)}% of goal</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Active Time</div>
+                        <div class="metric-value">${this.formatActiveTime(this.getChildActivityData(selectedChild.id)[0]?.duration || 0)}</div>
+                        <div class="metric-progress">${Math.min(Math.round(((this.getChildActivityData(selectedChild.id)[0]?.duration || 0) / selectedChild.activeTimeGoal) * 100), 100)}% of goal</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Heart Rate</div>
+                        <div class="metric-value">${this.getChildActivityData(selectedChild.id)[0]?.avgHeartRate || 0} BPM</div>
+                        <div class="metric-progress">${Math.min(Math.round(((this.getChildActivityData(selectedChild.id)[0]?.avgHeartRate || 0) / selectedChild.heartRateGoal) * 100), 100)}% of goal</div>
                     </div>
                 </div>
             </div>
-
             <div class="child-card">
-                <h3>${selectedChild.username}'s Progress</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">${this.getChildStats(selectedChild.id).totalSteps.toLocaleString()}</div>
-                        <div class="stat-label">Today's Steps</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${this.getChildStats(selectedChild.id).progress}%</div>
-                        <div class="stat-label">Goal Progress</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${this.getChildStats(selectedChild.id).rewards}</div>
-                        <div class="stat-label">Rewards Earned</div>
-                    </div>
-                </div>
+                ${this.renderMetricControls()}
                 <div class="activity-chart-container">
                     <canvas id="activityChart"></canvas>
                 </div>
             </div>
-
-            <div class="approval-requests">
-                <h3>Pending Approvals</h3>
-                ${this.renderPendingApprovals()}
-            </div>
         `;
 
-        this.initializeChart('activityChart', this.getChildActivityData(selectedChild.id));
+        this.updateChart(selectedChild.id);
     }
 
     renderChildDashboard(container) {
@@ -413,14 +478,21 @@ class DashboardManager {
 
     updateGoals() {
         const stepsGoal = parseInt(document.getElementById('stepsGoal').value);
-        if (isNaN(stepsGoal) || stepsGoal <= 0) {
-            this.showNotification('Please enter a valid goal value');
+        const activeTimeGoal = parseInt(document.getElementById('activeTimeGoal').value);
+        const heartRateGoal = parseInt(document.getElementById('heartRateGoal').value);
+    
+        if (isNaN(stepsGoal) || stepsGoal <= 0 || 
+            isNaN(activeTimeGoal) || activeTimeGoal <= 0 ||
+            isNaN(heartRateGoal) || heartRateGoal <= 0) {
+            this.showNotification('Please enter valid goal values');
             return;
         }
         
         const childIndex = this.children.findIndex(child => child.id === this.selectedChildId);
         if (childIndex !== -1) {
             this.children[childIndex].dailyGoal = stepsGoal;
+            this.children[childIndex].activeTimeGoal = activeTimeGoal;
+            this.children[childIndex].heartRateGoal = heartRateGoal;
             this.showNotification('Goals updated successfully!');
             this.renderDashboard();
         }
@@ -442,8 +514,13 @@ class DashboardManager {
     }
 
     getChildActivityData(childId) {
-        const seedMultiplier = childId === 'child1' ? 1 : 1.5;
-        return this.generateMockActivities(seedMultiplier);
+        if (!this.storedActivityData || !this.storedActivityData[childId]) {
+            this.storedActivityData = {
+                ...this.storedActivityData,
+                [childId]: this.generateMockActivities(childId === 'child1' ? 1 : 1.5)
+            };
+        }
+        return this.storedActivityData[childId];
     }
 
     calculateTotalAvailableSparks() {
@@ -476,39 +553,58 @@ class DashboardManager {
         const activities = [];
         const types = ['Walking', 'Running', 'Cycling', 'Swimming'];
         const now = new Date();
-
+    
         for (let i = 0; i < 30; i++) {
             const date = new Date(now - i * 24 * 60 * 60 * 1000);
             activities.push({
                 type: types[Math.floor(Math.random() * types.length)],
                 steps: Math.floor((Math.random() * 5000 + 3000) * (seedMultiplier || 1)),
+                duration: Math.floor(Math.random() * 180) + 30, // 30-210 minutes
+                avgHeartRate: Math.floor(Math.random() * 40) + 80, // 80-120 BPM
                 points: Math.floor(Math.random() * 100) + 50,
                 timestamp: date.toISOString(),
                 redeemed: Math.random() > 0.7
             });
         }
-
+    
         return activities;
     }
 
-    initializeChart(canvasId, activityData) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        
+    updateChart(childId) {
+        const ctx = document.getElementById('activityChart').getContext('2d');
         if (this.activityChart) {
             this.activityChart.destroy();
         }
-
-        const chartData = this.prepareChartData(activityData);
+    
+        const activities = this.getChildActivityData(childId);
+        const chartData = this.prepareChartData(activities, this.currentMetric);
         
+        const metricConfigs = {
+            steps: {
+                label: 'Daily Steps',
+                color: '#4CAF50'
+            },
+            activeTime: {
+                label: 'Active Minutes',
+                color: '#4CAF50'
+            },
+            heartRate: {
+                label: 'Average Heart Rate',
+                color: '#4CAF50'
+            }
+        };
+    
+        const config = metricConfigs[this.currentMetric];
+    
         this.activityChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: chartData.labels,
                 datasets: [{
-                    label: 'Daily Steps',
-                    data: chartData.steps,
-                    borderColor: '#FF4B4B',
-                    backgroundColor: 'rgba(255, 75, 75, 0.1)',
+                    label: config.label,
+                    data: chartData.values,
+                    borderColor: config.color,
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
                     tension: 0.4,
                     fill: true
                 }]
@@ -522,10 +618,10 @@ class DashboardManager {
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-                        backgroundColor: 'rgba(30, 32, 40, 0.9)',
+                        backgroundColor: 'rgba(76, 175, 80, 0.9)',
                         titleColor: '#FFFFFF',
                         bodyColor: '#FFFFFF',
-                        borderColor: '#FF4B4B',
+                        borderColor: '#4CAF50',
                         borderWidth: 1
                     }
                 },
@@ -533,10 +629,10 @@ class DashboardManager {
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(0, 0, 0, 0.1)'
                         },
                         ticks: {
-                            color: '#A1A1AA'
+                            color: '#666666'
                         }
                     },
                     x: {
@@ -544,7 +640,7 @@ class DashboardManager {
                             display: false
                         },
                         ticks: {
-                            color: '#A1A1AA'
+                            color: '#666666'
                         }
                     }
                 }
@@ -552,57 +648,45 @@ class DashboardManager {
         });
     }
 
-    prepareChartData(activities) {
+    prepareChartData(activities, metric) {
         const data = {
             labels: [],
-            steps: []
+            values: []
         };
-
-        const dailySteps = activities.reduce((acc, activity) => {
+    
+        const dailyData = activities.reduce((acc, activity) => {
             const date = new Date(activity.timestamp).toLocaleDateString();
-            acc[date] = (acc[date] || 0) + activity.steps;
+            let value;
+            
+            switch(metric) {
+                case 'steps':
+                    value = activity.steps;
+                    break;
+                case 'activeTime':
+                    value = activity.duration;
+                    break;
+                case 'heartRate':
+                    value = activity.avgHeartRate;
+                    break;
+                default:
+                    value = activity.steps;
+            }
+            
+            acc[date] = value;
             return acc;
         }, {});
-
-        Object.entries(dailySteps).forEach(([date, steps]) => {
+    
+        // Sort dates chronologically (oldest to newest)
+        const sortedDates = Object.keys(dailyData).sort((a, b) => 
+            new Date(a) - new Date(b)
+        );
+    
+        sortedDates.forEach(date => {
             data.labels.push(date);
-            data.steps.push(steps);
+            data.values.push(dailyData[date]);
         });
-
+    
         return data;
-    }
-
-    renderPendingApprovals() {
-        const pendingApprovals = [
-            { id: 1, childName: 'Tommy', type: 'Screen Time', amount: '30 minutes' },
-            { id: 2, childName: 'Sarah', type: 'Marketplace Purchase', amount: 'Nintendo Switch' }
-        ];
-
-        if (pendingApprovals.length === 0) {
-            return '<p class="no-approvals">No pending approvals</p>';
-        }
-
-        return `
-            <div class="approval-list">
-                ${pendingApprovals.map(approval => `
-                    <div class="approval-item">
-                        <div class="approval-details">
-                            <span class="child-name">${approval.childName}</span>
-                            <span class="approval-type">${approval.type}</span>
-                            <span class="approval-amount">${approval.amount}</span>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn approve-btn" onclick="dashboardManager.handleApproval(${approval.id}, true)">
-                                Approve
-                            </button>
-                            <button class="btn deny-btn" onclick="dashboardManager.handleApproval(${approval.id}, false)">
-                                Deny
-                            </button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
     }
 
     handleApproval(approvalId, isApproved) {
@@ -612,7 +696,24 @@ class DashboardManager {
     }
 
     showNotification(message) {
-        alert(message);
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+    
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+    
+        // Trigger animation
+        setTimeout(() => toast.classList.add('visible'), 10);
+    
+        // Remove after 2 seconds
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
     }
 
     debugCurrentStats() {

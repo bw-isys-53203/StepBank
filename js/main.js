@@ -2,7 +2,7 @@
 // Global navigation function
 // In main.js
 function showSection(sectionId) {
-    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 'electronics'];
+    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 'electronics', 'pendingApprovals'];
     
     // Cleanup any active timers/state when switching sections
     if (window.electronicsManager && sectionId !== 'electronics') {
@@ -18,6 +18,9 @@ function showSection(sectionId) {
     switch (sectionId) {
         case 'dashboard':
             window.dashboardManager.initialize(window.authManager.currentUser);
+            break;
+        case 'pendingApprovals':
+            window.pendingApprovalsManager.initialize(window.authManager.currentUser);
             break;
         case 'rewards':
             window.rewardsManager.initialize(window.authManager.currentUser);
