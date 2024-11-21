@@ -36,14 +36,6 @@ class RewardsManager {
         // In a real app, this would fetch from an API
         this.rewards = [
             {
-                id: 'screen_time_1',
-                title: 'Extra Screen Time',
-                description: '30 minutes of additional screen time',
-                points: 100,
-                type: 'screen_time',
-                duration: 30
-            },
-            {
                 id: 'roblox_1',
                 title: 'Roblox Gift Card',
                 description: '$10 Roblox gift card',
