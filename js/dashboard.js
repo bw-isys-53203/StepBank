@@ -181,21 +181,35 @@ class DashboardManager {
     }
 
     getTotalSteps() {
+        if (this.currentUser.id.startsWith('child')) {
+            return this.getChildActivityData(this.currentUser.id)[0]?.steps || 0;
+        }
         return this.currentActivityData.steps;
     }
 
     getActivityMinutes() {
+        if (this.currentUser.id.startsWith('child')) {
+            return this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
+        }
         return this.currentActivityData.minutes;
     }
 
     getActivityTime() {
-        const minutes = this.currentActivityData.minutes;
+        let minutes;
+        if (this.currentUser.id.startsWith('child')) {
+            minutes = this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
+        } else {
+            minutes = this.currentActivityData.minutes;
+        }
         const hours = Math.floor(minutes / 60);
         const remainingMinutes = minutes % 60;
         return `${hours}h ${remainingMinutes}m`;
     }
 
     getAverageHR() {
+        if (this.currentUser.id.startsWith('child')) {
+            return this.getChildActivityData(this.currentUser.id)[0]?.avgHeartRate || 0;
+        }
         return this.currentActivityData.heartRate;
     }
 
@@ -203,20 +217,15 @@ class DashboardManager {
         const steps = this.getTotalSteps();
         const activityTime = this.getActivityMinutes();
         const avgHR = this.getAverageHR();
-    
-        console.log('Calculating sparks with:', { steps, activityTime, avgHR });
-    
+        
         if (this.sparkCalculator) {
             const result = this.sparkCalculator.calculateSparks(
                 steps,
                 activityTime,
                 avgHR
             );
-            
-            console.log('Spark calculation result:', result);
             return result.sparkPoints;
         }
-        
         return 0;
     }
 
@@ -524,25 +533,29 @@ class DashboardManager {
     }
 
     calculateTotalAvailableSparks() {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
-        const recentActivities = this.activities.filter(activity => 
-            new Date(activity.timestamp) >= thirtyDaysAgo
-        );
-
-        let totalEarned = 0;
-        recentActivities.forEach(activity => {
-            const sparkResult = this.sparkCalculator.calculateSparks(
-                activity.steps,
-                activity.activeMinutes || Math.floor(activity.duration / 60),
-                activity.avgHeartRate
+        if (this.currentUser.id.startsWith('child')) {
+            const activities = this.getChildActivityData(this.currentUser.id);
+            // Get last 7 days of activities
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const recentActivities = activities.filter(activity => 
+                new Date(activity.timestamp) >= sevenDaysAgo
             );
-            totalEarned += sparkResult.sparkPoints;
-        });
-
-        const totalSpent = this.getSpentSparks();
-        return totalEarned - totalSpent;
+    
+            let totalEarned = 0;
+            recentActivities.forEach(activity => {
+                const sparkResult = this.sparkCalculator.calculateSparks(
+                    activity.steps,
+                    activity.duration,
+                    activity.avgHeartRate
+                );
+                totalEarned += sparkResult.sparkPoints;
+            });
+    
+            return totalEarned;
+        }
+        return 0;
     }
 
     getSpentSparks() {

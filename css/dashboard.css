@@ -28,18 +28,28 @@
 
 .goal-form {
     display: flex;
-    gap: 15px;
+    gap: 40px;  /* Increased from 15px */
     align-items: flex-end;
     margin-top: 10px;
+    justify-content: space-between;  /* Added for better spacing */
+    padding: 10px 20px;  /* Added padding */
+}
+
+.form-group {
+    flex: 1;  /* Added to make each input take equal space */
 }
 
 .goal-input {
-    width: 120px;
-    padding: 8px;
+    width: 100%;  /* Changed from 120px to be responsive */
+    padding: 12px;  /* Slightly increased padding */
     background-color: var(--card-bg);
     border: 1px solid transparent;
     border-radius: 4px;
     color: var(--text-primary);
+}
+
+.update-goals-btn {
+    margin-left: 20px;  /* Added margin */
 }
 
 .children-overview {
