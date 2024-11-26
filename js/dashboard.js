@@ -15,20 +15,19 @@ class DashboardManager {
         };
         this.currentMetric = 'steps';
         this.switchMetric = this.switchMetric.bind(this);
+
     }
 
     async initialize(user) {
         this.currentUser = user;
         await this.loadConfig();
         
-        // Generate and store separate data for each child
-        if (!this.storedActivityData) {
-            this.storedActivityData = {
-                child1: this.generateMockActivities(1),     // Tommy's data
-                child2: this.generateMockActivities(1.5)    // Sarah's data with 1.5x multiplier
-            };
-        }
-    
+        // Initialize screen time usage after sparkCalculator is ready
+        this.screenTimeUsage = {
+            child1: await this.generateScreenTimeUsage('child1'),
+            child2: await this.generateScreenTimeUsage('child2')
+        };
+        
         this.loadDashboardData();
         this.setupEventListeners();
         this.renderDashboard();
@@ -75,6 +74,57 @@ class DashboardManager {
         return baseHR + (Math.random() > 0.7 ? extraHR : 0);
     }
 
+    async generateScreenTimeUsage(childId) {
+        console.log('Generating screen time for child:', childId);
+        const usage = [];
+        const now = new Date();
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(now - i * 24 * 60 * 60 * 1000);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            try {
+                const dayActivities = this.getChildActivityData(childId)
+                    .filter(activity => activity.timestamp.startsWith(dateStr));
+                
+                console.log('Activities for day:', dateStr, dayActivities);
+                
+                const availableMinutes = dayActivities.reduce((total, activity) => {
+                    const sparkResult = this.sparkCalculator.calculateSparks(
+                        activity.steps,
+                        activity.duration,
+                        activity.avgHeartRate
+                    );
+                    console.log('Spark result for activity:', sparkResult);
+                    return total + sparkResult.sparkPoints;
+                }, 0);
+    
+                const maxUsage = Math.min(availableMinutes, 120);
+                const actualUsage = Math.floor(Math.random() * maxUsage);
+    
+                console.log('Generated usage for day:', {
+                    date: dateStr,
+                    minutes: actualUsage,
+                    availableMinutes: availableMinutes
+                });
+    
+                usage.push({
+                    date: dateStr,
+                    minutes: actualUsage,
+                    availableMinutes: availableMinutes
+                });
+            } catch (error) {
+                console.error('Error generating screen time for date:', dateStr, error);
+            }
+        }
+        return usage;
+    }
+
+    getTotalScreenTime(childId) {
+        return this.screenTimeUsage[childId]
+            .reduce((total, day) => total + day.minutes, 0);
+    }
+
     renderMetricControls() {
         return `
             <div class="metric-controls">
@@ -89,6 +139,10 @@ class DashboardManager {
                 <button class="btn metric-btn ${this.currentMetric === 'heartRate' ? 'active' : ''}" 
                         onclick="window.dashboardManager.switchMetric('heartRate')">
                     Heart Rate
+                </button>
+                <button class="btn metric-btn ${this.currentMetric === 'screenTime' ? 'active' : ''}" 
+                        onclick="window.dashboardManager.switchMetric('screenTime')">
+                    Screen Time
                 </button>
             </div>
         `;
@@ -211,6 +265,14 @@ class DashboardManager {
             return this.getChildActivityData(this.currentUser.id)[0]?.avgHeartRate || 0;
         }
         return this.currentActivityData.heartRate;
+    }
+
+    deductScreenTime(childId, minutes) {
+        const availableSparks = this.calculateTotalAvailableSparks();
+        const newTotal = Math.max(0, availableSparks - Math.floor(minutes));
+        // Store the new total
+        // Update all relevant displays
+        this.renderDashboard();
     }
 
     calculateCurrentDaySparks() {
@@ -531,7 +593,7 @@ class DashboardManager {
         }
         return this.storedActivityData[childId];
     }
-
+/*
     calculateTotalAvailableSparks() {
         if (this.currentUser.id.startsWith('child')) {
             const activities = this.getChildActivityData(this.currentUser.id);
@@ -556,6 +618,39 @@ class DashboardManager {
             return totalEarned;
         }
         return 0;
+    }
+*/
+
+    calculateTotalAvailableSparks() {
+        if (this.currentUser.id.startsWith('child')) {
+            const screenTimeData = this.screenTimeUsage[this.currentUser.id];
+            // Sum all available minutes from the last 7 days
+            const totalAvailable = screenTimeData.reduce((total, day) => total + day.availableMinutes, 0);
+            // Sum all used minutes
+            const totalUsed = screenTimeData.reduce((total, day) => total + day.minutes, 0);
+        
+            // Store this value to ensure consistency across screens
+            if (!this._cachedTotalAvailable) {
+                this._cachedTotalAvailable = totalAvailable - totalUsed;
+            }
+        
+            return this._cachedTotalAvailable;
+        }
+        return 0;
+    }
+
+    // Add method to get screen time data for specific day
+    getScreenTimeForDate(childId, date) {
+        const usage = this.screenTimeUsage[childId];
+        const dayUsage = usage.find(day => day.date === date);
+        return dayUsage?.minutes || 0;
+    }
+
+    // Add method to get available time for specific day
+    getAvailableTimeForDate(childId, date) {
+        const usage = this.screenTimeUsage[childId];
+        const dayUsage = usage.find(day => day.date === date);
+        return dayUsage?.availableMinutes || 0;
     }
 
     getSpentSparks() {
@@ -588,7 +683,7 @@ class DashboardManager {
         if (this.activityChart) {
             this.activityChart.destroy();
         }
-    
+     
         const activities = this.getChildActivityData(childId);
         const chartData = this.prepareChartData(activities, this.currentMetric);
         
@@ -604,14 +699,23 @@ class DashboardManager {
             heartRate: {
                 label: 'Average Heart Rate',
                 color: '#4CAF50'
+            },
+            screenTime: {
+                label: 'Screen Time (Minutes)',
+                color: '#4CAF50',
+                yAxis: {
+                    min: 0,
+                    max: 500,  
+                    stepSize: 60  // Show increments of 1 hour
+                }
             }
         };
-    
+     
         const config = metricConfigs[this.currentMetric];
-    
+     
         this.activityChart = new Chart(ctx, {
             type: 'line',
-            data: {
+            data: this.currentMetric === 'screenTime' ? chartData : {
                 labels: chartData.labels,
                 datasets: [{
                     label: config.label,
@@ -626,7 +730,7 @@ class DashboardManager {
                 responsive: true,
                 plugins: {
                     legend: {
-                        display: false
+                        display: this.currentMetric === 'screenTime'
                     },
                     tooltip: {
                         mode: 'index',
@@ -645,7 +749,8 @@ class DashboardManager {
                             color: 'rgba(0, 0, 0, 0.1)'
                         },
                         ticks: {
-                            color: '#666666'
+                            color: '#666666',
+                            ...(config.yAxis || {})
                         }
                     },
                     x: {
@@ -659,47 +764,85 @@ class DashboardManager {
                 }
             }
         });
-    }
+     }
 
     prepareChartData(activities, metric) {
-        const data = {
-            labels: [],
-            values: []
-        };
-    
-        const dailyData = activities.reduce((acc, activity) => {
-            const date = new Date(activity.timestamp).toLocaleDateString();
-            let value;
+        if (metric === 'screenTime') {
+            const screenTimeData = this.screenTimeUsage[this.selectedChildId];
+            const sortedData = screenTimeData.sort((a, b) => new Date(a.date) - new Date(b.date));
             
-            switch(metric) {
-                case 'steps':
-                    value = activity.steps;
-                    break;
-                case 'activeTime':
-                    value = activity.duration;
-                    break;
-                case 'heartRate':
-                    value = activity.avgHeartRate;
-                    break;
-                default:
-                    value = activity.steps;
-            }
+            // Calculate total available (running total)
+            const totalAvailable = sortedData.reduce((total, day) => 
+                total + (day.availableMinutes - day.minutes), 0);
+    
+            return {
+                labels: sortedData.map(day => new Date(day.date).toLocaleDateString()),
+                datasets: [{
+                    label: 'Used Screen Time',
+                    data: sortedData.map(day => day.minutes),
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Daily Available Time',
+                    data: sortedData.map(day => day.availableMinutes),
+                    borderColor: '#2E7D32',
+                    backgroundColor: 'rgba(46, 125, 50, 0.2)',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false
+                }, {
+                    label: `Total Available: ${totalAvailable} minutes`,
+                    data: sortedData.map(() => totalAvailable),
+                    borderColor: '#1B5E20',
+                    borderWidth: 2,
+                    borderDash: [10, 5],
+                    fill: false
+                }]
+            };
+        } else {
+            // Existing logic for other metrics
+            const data = {
+                labels: [],
+                values: []
+            };
             
-            acc[date] = value;
-            return acc;
-        }, {});
+            const dailyData = activities.reduce((acc, activity) => {
+                const date = new Date(activity.timestamp).toLocaleDateString();
+                let value;
+                
+                switch(metric) {
+                    case 'steps':
+                        value = activity.steps;
+                        break;
+                    case 'activeTime':
+                        value = activity.duration;
+                        break;
+                    case 'heartRate':
+                        value = activity.avgHeartRate;
+                        break;
+                    default:
+                        value = activity.steps;
+                }
+                
+                acc[date] = value;
+                return acc;
+            }, {});
     
-        // Sort dates chronologically (oldest to newest)
-        const sortedDates = Object.keys(dailyData).sort((a, b) => 
-            new Date(a) - new Date(b)
-        );
+            // Sort dates chronologically (oldest to newest)
+            const sortedDates = Object.keys(dailyData).sort((a, b) => 
+                new Date(a) - new Date(b)
+            );
     
-        sortedDates.forEach(date => {
-            data.labels.push(date);
-            data.values.push(dailyData[date]);
-        });
+            sortedDates.forEach(date => {
+                data.labels.push(date);
+                data.values.push(dailyData[date]);
+            });
     
-        return data;
+            return data;
+        }
     }
 
     handleApproval(approvalId, isApproved) {

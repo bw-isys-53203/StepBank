@@ -15,9 +15,9 @@ class ElectronicsManager {
     }
 
     loadAvailableTime() {
-        // Calculate based on sparks
-        const sparks = window.dashboardManager.calculateCurrentDaySparks();
-        this.timeAvailable = Math.floor(sparks / 10); // 10 sparks = 1 minute
+        // Use total available sparks from dashboard manager
+        const totalAvailable = window.dashboardManager.calculateTotalAvailableSparks();
+        this.timeAvailable = totalAvailable; // 1:1 conversion now
     }
 
     setupEventListeners() {
@@ -121,7 +121,7 @@ class ElectronicsManager {
 
             <div class="conversion-display">
                 <div class="currency-circle">
-                    <div class="value">${window.dashboardManager.calculateCurrentDaySparks()}</div>
+                    <div class="value">${window.dashboardManager.calculateTotalAvailableSparks()}</div>
                     <div class="label">SPARKS</div>
                 </div>
                 <div class="equals-sign">=</div>
