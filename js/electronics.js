@@ -20,6 +20,19 @@ class ElectronicsManager {
         this.timeAvailable = totalAvailable; // 1:1 conversion now
     }
 
+    showNotification(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('visible'), 10);
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
+    }
+
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.matches('.device-option')) {
@@ -31,51 +44,104 @@ class ElectronicsManager {
         });
     }
 
+    async controlPlug(deviceId, action) {
+        try {
+            const config = window.deviceConfigManager.getDeviceConfig(deviceId);
+            if (!config || !config.enabled || !config.ip) {
+                throw new Error('Device not configured or disabled');
+            }
+    
+            const response = await fetch('http://localhost:3001/control-device', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    device: deviceId,
+                    ip: config.ip,
+                    action: action
+                })
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to control device');
+            }
+    
+            const result = await response.json();
+            return result.success;
+        } catch (error) {
+            console.error('Error controlling plug:', error);
+            this.showNotification('Error controlling device. Please try again.');
+            return false;
+        }
+    }
+
     selectDevice(deviceId) {
         this.selectedDevice = deviceId;
         this.renderElectronics();
     }
 
-    startUnlock() {
+    async startUnlock() {
         if (!this.selectedDevice || this.timeAvailable <= 0) return;
-
-        this.state = 'rampUp';
-        const rampUpTime = 15; // 15 seconds for testing (would be 5 minutes in production)
-        let timeLeft = rampUpTime;
-
-        // Clear any existing interval
-        if (this.countdownInterval) {
-            clearInterval(this.countdownInterval);
-        }
-
-        // Start ramp up countdown
-        this.countdownInterval = setInterval(() => {
-            if (timeLeft <= 0) {
-                if (this.state === 'rampUp') {
-                    // Transition to active state
-                    this.state = 'active';
-                    timeLeft = this.timeAvailable * 60; // Convert minutes to seconds
-                    this.renderElectronics();
-                } else if (this.state === 'active' && timeLeft <= 0) {
-                    // Transition to ramp down
-                    this.state = 'rampDown';
-                    timeLeft = 15; // 15 seconds for testing
-                    this.renderElectronics();
-                } else if (this.state === 'rampDown' && timeLeft <= 0) {
-                    // End session
-                    clearInterval(this.countdownInterval);
-                    this.state = 'idle';
-                    this.selectedDevice = null;
-                    this.renderElectronics();
-                    return;
-                }
+    
+        try {
+            // Turn on plug
+            const plugSuccess = await this.controlPlug(this.selectedDevice, 'on');
+            if (!plugSuccess) {
+                this.showNotification('Failed to turn on device. Please try again.');
+                return;
             }
-
-            this.updateCountdown(timeLeft);
-            timeLeft--;
-        }, 1000);
-
-        this.renderElectronics();
+    
+            this.state = 'rampUp';
+            const rampUpTime = 15; // 15 seconds for testing
+            let timeLeft = rampUpTime;
+    
+            // Clear any existing interval
+            if (this.countdownInterval) {
+                clearInterval(this.countdownInterval);
+            }
+    
+            // Start ramp up countdown
+            this.countdownInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    if (this.state === 'rampUp') {
+                        // Transition to active state
+                        this.state = 'active';
+                        timeLeft = this.timeAvailable * 60; // Convert minutes to seconds
+                        this.renderElectronics();
+                    } else if (this.state === 'active' && timeLeft <= 0) {
+                        // Transition to ramp down
+                        this.state = 'rampDown';
+                        timeLeft = 15; // 15 seconds for testing
+                        this.renderElectronics();
+                    } else if (this.state === 'rampDown' && timeLeft <= 0) {
+                        // Turn off plug at end of ramp down
+                        this.controlPlug(this.selectedDevice, 'off')
+                            .then(() => {
+                                // End session
+                                clearInterval(this.countdownInterval);
+                                this.state = 'idle';
+                                this.selectedDevice = null;
+                                this.renderElectronics();
+                            })
+                            .catch(error => {
+                                console.error('Error turning off device:', error);
+                            });
+                        return;
+                    }
+                }
+    
+                this.updateCountdown(timeLeft);
+                timeLeft--;
+            }, 1000);
+    
+            this.renderElectronics();
+        } catch (error) {
+            console.error('Error during unlock process:', error);
+            this.showNotification('Error controlling device. Please try again.');
+            this.state = 'idle';
+            this.renderElectronics();
+        }
     }
 
     // In ElectronicsManager class, update the updateCountdown method:
@@ -136,18 +202,33 @@ class ElectronicsManager {
     }
 
     renderDeviceSelection() {
-        const devices = [
-            { id: 'switch', name: 'Nintendo Switch' },
-            { id: 'xbox', name: 'Xbox Series X' },
-            { id: 'ps5', name: 'PlayStation 5' },
-            { id: 'pc', name: 'Gaming PC' }
-        ];
-
+        // Get all configured devices
+        const configs = window.deviceConfigManager.getAllConfigs();
+        
+        // Filter only enabled devices
+        const enabledDevices = Object.entries(configs)
+            .filter(([_, config]) => config.enabled)
+            .map(([id, config]) => ({
+                id: id,
+                name: config.name
+            }));
+    
+        if (enabledDevices.length === 0) {
+            return `
+                <div class="devices-section">
+                    <h2>Select Device</h2>
+                    <div class="no-devices-message">
+                        No devices are currently enabled. Please contact a parent to enable devices.
+                    </div>
+                </div>
+            `;
+        }
+    
         return `
             <div class="devices-section">
                 <h2>Select Device</h2>
                 <div class="device-grid">
-                    ${devices.map(device => `
+                    ${enabledDevices.map(device => `
                         <button class="device-option ${this.selectedDevice === device.id ? 'selected' : ''}"
                                 data-device="${device.id}">
                             ${device.name}
@@ -175,13 +256,28 @@ class ElectronicsManager {
         `;
     }
         // Add this new method
-    stopSession() {
+    async stopSession() {
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
         }
-        this.state = 'idle';
-        this.selectedDevice = null;
-        this.renderElectronics();
+    
+        // Start ramp down process
+        this.state = 'rampDown';
+        const rampDownTime = 15; // 15 seconds for testing
+        let timeLeft = rampDownTime;
+    
+        const rampDownInterval = setInterval(async () => {
+            if (timeLeft <= 0) {
+                clearInterval(rampDownInterval);
+                // Turn off plug at end of ramp down
+                await this.controlPlug(this.selectedDevice, 'off');
+                this.state = 'idle';
+                this.selectedDevice = null;
+                this.renderElectronics();
+            }
+            this.updateCountdown(timeLeft);
+            timeLeft--;
+        }, 1000);
     }
 
     // Add cleanup method
