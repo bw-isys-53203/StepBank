@@ -33,7 +33,7 @@ class AddChildManager {
                     </div>
                     <button class="btn" onclick="showSection('dashboard')">Back</button>
                 </nav>
-                
+
                 <div class="children-list-container">
                     ${this.children.length > 0 ? this.renderChildrenList() : this.renderNoChildren()}
                 </div>
@@ -89,8 +89,8 @@ class AddChildManager {
                             <div class="daily-goal">Steps Goal: ${child.goals.steps} steps</div>
                             <div class="daily-goal">Active Time Goal: ${child.goals.activeTime} minutes</div>
                             <div class="daily-goal">Heart Rate Goal: ${child.goals.heartRate} BPM</div>
-                            <div class="registration-status ${child.registered ? 'registered' : 'pending'}">
-                                Status: ${child.registered ? 'Registered' : 'Pending Registration'}
+                            <div class="registration-status ${child.isRegistered ? 'registered' : 'pending'}">
+                                Status: ${child.isRegistered ? 'Registered' : 'Pending Registration'}
                             </div>
                             ${!child.registered ? `
                                 <div class="registration-token">

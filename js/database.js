@@ -1,12 +1,11 @@
 // Firebase Configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyD8ZczUP1Zx2iImP0_65CKcX0Q_ryHxZ88",
-    authDomain: "stepbank-73052.firebaseapp.com",
-    databaseURL: "https://stepbank-73052-default-rtdb.firebaseio.com",
-    projectId: "stepbank-73052",
-    storageBucket: "stepbank-73052.firebasestorage.app",
-    messagingSenderId: "113304141240",
-    appId: "1:113304141240:web:5a43c82ba56ecec782234d"
+    apiKey: "AIzaSyAv4HMH3tRjgJPQMjtrXlJLxuZd4kiLfSs",
+    authDomain: "step-bank-7ad4b.firebaseapp.com",
+    projectId: "step-bank-7ad4b",
+    storageBucket: "step-bank-7ad4b.firebasestorage.app",
+    messagingSenderId: "807237773244",
+    appId: "1:807237773244:web:46165a1e8b513af6a16db9"
 };
 
 class FirebaseDB {
