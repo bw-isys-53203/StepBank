@@ -1,0 +1,35 @@
+{
+ "name": "electron-stepbank",
+ "version": "1.0.0",
+ "main": "main.js",
+ "scripts": {
+    "start": "set NODE_ENV=development && electron .",
+    "start:prod": "set NODE_ENV=production && electron .",
+    "build": "set NODE_ENV=development && electron-builder --config.productName=electron-stepbank-dev",
+    "build:prod": "set NODE_ENV=production && electron-builder --config.productName=electron-stepbank-prod"
+  },
+ "devDependencies": {
+   "electron": "^27.3.11",
+   "electron-builder": "^24.9.1"
+ },
+  "build": {
+   "appId": "com.stepbank.app",
+   "productName": "electron-stepbank",
+   "files": [
+     "**/*"
+   ],
+   "extraResources": [
+     {
+       "from": "./plug.py",
+       "to": "./plug.py"
+     }
+   ],
+   "win": {
+     "target": "portable"
+   }
+ },
+ "dependencies": {
+   "cors": "^2.8.5",
+   "express": "^4.21.1"
+ }
+}
