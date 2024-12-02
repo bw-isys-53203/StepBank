@@ -19,6 +19,7 @@ class DashboardManager {
     }
 
     async initialize(user) {
+        console.log("In dashboard initialize");
         this.currentUser = user;
         await this.loadConfig();
         
@@ -28,8 +29,8 @@ class DashboardManager {
             child2: await this.generateScreenTimeUsage('child2')
         };
         
-        this.loadDashboardData();
-        this.setupEventListeners();
+        await this.loadDashboardData();
+        await this.setupEventListeners();
         this.renderDashboard();
     }
 
@@ -88,7 +89,7 @@ class DashboardManager {
                     .filter(activity => activity.timestamp.startsWith(dateStr));
                 
                 console.log('Activities for day:', dateStr, dayActivities);
-                
+
                 const availableMinutes = dayActivities.reduce((total, activity) => {
                     const sparkResult = this.sparkCalculator.calculateSparks(
                         activity.steps,
@@ -162,32 +163,55 @@ class DashboardManager {
     }
     
     async loadDashboardData() {
-        this.activities = this.generateMockActivities();
-        
-        if (this.currentUser.isParent) {
-            // Simulate loading children data for parent
-            this.children = [
-                { 
-                    id: 'child1', 
-                    username: 'Tommy', 
-                    age: 10, 
-                    dailyGoal: 10000,
-                    activeTimeGoal: 60,    // 60 minutes
-                    heartRateGoal: 90      // 90 BPM
-                },
-                { 
-                    id: 'child2', 
-                    username: 'Sarah', 
-                    age: 8, 
-                    dailyGoal: 8000,
-                    activeTimeGoal: 45,    // 45 minutes
-                    heartRateGoal: 85      // 85 BPM
+        try {
+            if (this.currentUser.accountType === 'parent') {
+                // Use the database method to get children
+                const childrenData = await db.getParentChildren(this.currentUser.userId);
+
+                if (childrenData) {
+                    // Transform children data into array format
+                    this.children = Object.entries(childrenData).map(([childId, child]) => ({
+                        id: childId,
+                        username: child.childName,
+                        age: child.childAge,
+                        dailyGoal: child.goals.steps,
+                        activeTimeGoal: child.goals.activeTime,
+                        heartRateGoal: child.goals.heartRate,
+                        isRegistered: child.isRegistered
+                    }));
+    
+                    // Set initial selected child if there are children
+                    if (this.children.length > 0) {
+                        this.selectedChildId = this.children[0].id;
+                    }
+    
+                    console.log("Loaded children data:", this.children);
+                    console.log("Set initial selectedChildId:", this.selectedChildId);
+                } else {
+                    this.children = [];
+                    console.log("No children found for this parent");
                 }
-            ];
-            // Set initial selected child
-            this.selectedChildId = this.children[0].id;
-            console.log("Loaded children data:", this.children);
-            console.log("Set initial selectedChildId:", this.selectedChildId);
+            } else if (this.currentUser.accountType === 'child') {
+                // Get child's own data using the new method
+                const childData = await db.getChildData(this.currentUser.parentId, this.currentUser.userId);
+
+
+                if (childData) {
+                    this.goals = {
+                        dailyGoal: childData.goals.steps,
+                        activeTimeGoal: childData.goals.activeTime,
+                        heartRateGoal: childData.goals.heartRate
+                    };
+                    
+                    // You might want to load activities or other child-specific data here
+                    console.log("Loaded child data:", childData);
+                } else {
+                    console.error("Could not load child data");
+                }
+            }
+        } catch (error) {
+            console.error("Error loading dashboard data:", error);
+            // You might want to show an error message to the user
         }
     }
 
@@ -235,14 +259,14 @@ class DashboardManager {
     }
 
     getTotalSteps() {
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.steps || 0;
         }
         return this.currentActivityData.steps;
     }
 
     getActivityMinutes() {
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
         }
         return this.currentActivityData.minutes;
@@ -250,7 +274,7 @@ class DashboardManager {
 
     getActivityTime() {
         let minutes;
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             minutes = this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
         } else {
             minutes = this.currentActivityData.minutes;
@@ -261,7 +285,7 @@ class DashboardManager {
     }
 
     getAverageHR() {
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.avgHeartRate || 0;
         }
         return this.currentActivityData.heartRate;
@@ -294,10 +318,13 @@ class DashboardManager {
     renderDashboard() {
         const dashboardContainer = document.getElementById('dashboard');
         
-        if (this.currentUser.isParent) {
+        if (this.currentUser.accountType === 'parent') {
             this.renderParentDashboard(dashboardContainer);
-        } else {
+        } else if (this.currentUser.accountType === 'child') {
+            console.log("In renderDashboard child")
             this.renderChildDashboard(dashboardContainer);
+        } else {
+            console.error('Invalid account type');
         }
     }
 
@@ -326,6 +353,7 @@ class DashboardManager {
                 <div class="nav-buttons">
                <!--     <button class="btn" onclick="showSection('rewards')">Manage Rewards</button>
                     <button class="btn" onclick="showSection('marketplace')">Marketplace</button> -->
+                    <button class="btn" onclick="showSection('children')">Children</button>
                     <button class="btn" onclick="showSection('pendingApprovals')">Approvals</button>
                     <button class="btn" onclick="handleLogout()">Logout</button>
                 </div>
@@ -396,6 +424,7 @@ class DashboardManager {
     }
 
     renderChildDashboard(container) {
+        console.log("Rendering Child Dashboard");
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
@@ -547,7 +576,7 @@ class DashboardManager {
         setTimeout(() => sparkle.remove(), 1000);
     }
 
-    updateGoals() {
+    /*updateGoals() {
         const stepsGoal = parseInt(document.getElementById('stepsGoal').value);
         const activeTimeGoal = parseInt(document.getElementById('activeTimeGoal').value);
         const heartRateGoal = parseInt(document.getElementById('heartRateGoal').value);
@@ -567,7 +596,49 @@ class DashboardManager {
             this.showNotification('Goals updated successfully!');
             this.renderDashboard();
         }
-    }
+    }*/
+
+        async updateGoals() {
+            const stepsGoal = parseInt(document.getElementById('stepsGoal').value);
+            const activeTimeGoal = parseInt(document.getElementById('activeTimeGoal').value);
+            const heartRateGoal = parseInt(document.getElementById('heartRateGoal').value);
+        
+            // Validate input values
+            if (isNaN(stepsGoal) || stepsGoal <= 0 || 
+                isNaN(activeTimeGoal) || activeTimeGoal <= 0 ||
+                isNaN(heartRateGoal) || heartRateGoal <= 0) {
+                this.showNotification('Please enter valid goal values');
+                return;
+            }
+        
+            try {
+                // Update in local array
+                const childIndex = this.children.findIndex(child => child.id === this.selectedChildId);
+                if (childIndex !== -1) {
+                    // Update local data
+                    this.children[childIndex].dailyGoal = stepsGoal;
+                    this.children[childIndex].activeTimeGoal = activeTimeGoal;
+                    this.children[childIndex].heartRateGoal = heartRateGoal;
+        
+                    // Update in Firebase
+                    await db.updateChildGoals(
+                        this.currentUser.userId, 
+                        this.selectedChildId, 
+                        {
+                            steps: stepsGoal,
+                            activeTime: activeTimeGoal,
+                            heartRate: heartRateGoal
+                        }
+                    );
+        
+                    this.showNotification('Goals updated successfully!');
+                    this.renderDashboard();
+                }
+            } catch (error) {
+                console.error('Error updating goals:', error);
+                this.showNotification('Failed to update goals. Please try again.');
+            }
+        }
 
     getChildStats(childId) {
         const child = this.children.find(c => c.id === childId);
@@ -595,7 +666,7 @@ class DashboardManager {
     }
 /*
     calculateTotalAvailableSparks() {
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             const activities = this.getChildActivityData(this.currentUser.id);
             // Get last 7 days of activities
             const sevenDaysAgo = new Date();
@@ -622,12 +693,14 @@ class DashboardManager {
 */
 
     calculateTotalAvailableSparks() {
-        if (this.currentUser.id.startsWith('child')) {
+        if (this.currentUser.accountType === 'child') {
             const screenTimeData = this.screenTimeUsage[this.currentUser.id];
             // Sum all available minutes from the last 7 days
-            const totalAvailable = screenTimeData.reduce((total, day) => total + day.availableMinutes, 0);
+            const totalAvailable = 100
+            //const totalAvailable = screenTimeData.reduce((total, day) => total + day.availableMinutes, 0);
             // Sum all used minutes
-            const totalUsed = screenTimeData.reduce((total, day) => total + day.minutes, 0);
+            const totalUsed = 100
+            //const totalUsed = screenTimeData.reduce((total, day) => total + day.minutes, 0);
         
             // Store this value to ensure consistency across screens
             if (!this._cachedTotalAvailable) {

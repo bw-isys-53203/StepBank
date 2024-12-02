@@ -1,0 +1,216 @@
+/* addChild.css */
+.add-child-container {
+    padding: 20px;
+    margin-bottom: 80px; /* For bottom nav */
+}
+
+.add-child-form-container {
+    background-color: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.add-child-form-container h2 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 24px;
+    color: #2C3E50;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--button-bg);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-primary);
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.children-list-container {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.children-list-container h2 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 24px;
+    color: #2C3E50;
+    margin-bottom: 20px;
+}
+
+.children-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.child-card {
+    background-color: var(--button-bg);
+    padding: 20px;
+    border-radius: 10px;
+    transition: transform 0.2s;
+}
+
+.child-card:hover {
+    transform: translateY(-2px);
+}
+
+.child-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.child-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.child-age {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.child-details {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.daily-goal {
+    font-size: 16px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.registration-status {
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin: 8px 0;
+}
+
+.registration-status.pending {
+    background-color: #FFF3E0;
+    color: #F57C00;
+}
+
+.registration-status.registered {
+    background-color: #E8F5E9;
+    color: #4CAF50;
+}
+
+.registration-token {
+    background-color: var(--card-bg);
+    padding: 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-top: 12px;
+    word-break: break-all;
+}
+
+.no-children {
+    text-align: center;
+    padding: 40px;
+}
+
+.no-children-message {
+    font-size: 18px;
+    color: var(--text-secondary);
+}
+
+.toast-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 1000;
+}
+
+.toast-notification.error {
+    background-color: #f44336;
+}
+
+.toast-notification.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .add-child-container {
+        padding: 10px;
+    }
+
+    .children-list {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .submit-btn {
+        padding: 12px;
+        font-size: 16px;
+    }
+
+    .child-card {
+        margin-bottom: 15px;
+    }
+
+    .child-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}

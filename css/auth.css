@@ -89,3 +89,21 @@
 .auth-error.visible {
     display: block;
 }
+
+.auth-form select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+}
+
+.auth-form select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#tokenGroup {
+    transition: all 0.3s ease;
+}

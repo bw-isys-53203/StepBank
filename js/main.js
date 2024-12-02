@@ -2,7 +2,7 @@
 // Global navigation function
 // In main.js
 function showSection(sectionId) {
-    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 'electronics', 'pendingApprovals'];
+    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 'electronics', 'pendingApprovals', 'children'];
     
     // Cleanup any active timers/state when switching sections
     if (window.electronicsManager && sectionId !== 'electronics') {
@@ -17,6 +17,7 @@ function showSection(sectionId) {
     // Initialize relevant manager based on section
     switch (sectionId) {
         case 'dashboard':
+            console.log("In show section dashboard");
             window.dashboardManager.initialize(window.authManager.currentUser);
             break;
         case 'pendingApprovals':
@@ -31,6 +32,9 @@ function showSection(sectionId) {
         case 'electronics':
             window.electronicsManager.initialize(window.authManager.currentUser);
             break;
+        case 'children':
+            window.addChildManager.initialize(window.authManager.currentUser);
+            break;    
     }
 }
 
@@ -45,8 +49,8 @@ function handleLogin() {
 function handleRegister() {
     const username = document.getElementById('registerUsername').value;
     const password = document.getElementById('registerPassword').value;
-    const isParent = document.getElementById('isParent').checked;
-    window.authManager.handleRegister(username, password, isParent);
+    const accountType = document.getElementById('accountType').value;
+    window.authManager.handleRegister(username, password, accountType);
 }
 
 // Global logout handler
