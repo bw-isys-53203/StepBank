@@ -11,7 +11,10 @@
     <link rel="stylesheet" href="css/marketplace.css">
     <link rel="stylesheet" href="css/electronics.css">
     <link rel="stylesheet" type="text/css" href="css/pendingApprovals.css">
+    <link rel="stylesheet" type="text/css" href="css/addChild.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-database-compat.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -46,10 +49,16 @@
                     <input type="password" id="registerPassword">
                 </div>
                 <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isParent">
-                        I am a parent
-                    </label>
+                    <label>Account Type</label>
+                    <select id="accountType" onchange="authManager.handleAccountTypeChange()">
+                        <option value="">Select Account Type</option>
+                        <option value="parent">Parent</option>
+                        <option value="child">Child</option>
+                    </select>
+                </div>
+                <div class="form-group" id="tokenGroup" style="display: none;">
+                    <label>Registration Token</label>
+                    <input type="text" id="registrationToken">
                 </div>
                 <button class="btn" onclick="handleRegister()">Register</button>
             </div>
@@ -57,7 +66,7 @@
 
         <!-- Dashboard Section -->
         <div id="dashboard" class="dashboard hidden">
-            <nav class="nav">
+            <!--<nav class="nav">
                 <div class="logo">
                     <div class="logo-icon"></div>
                     <span>StepBank</span>
@@ -82,17 +91,19 @@
                     <div class="stat-label">Available Rewards</div>
                 </div>
             </div>
-            <canvas id="activityChart"></canvas>
+            <canvas id="activityChart"></canvas>-->
         </div>
-
+        
         <!-- Rewards and Marketplace sections will be loaded dynamically -->
         <div id="pendingApprovals" class="pending-approvals hidden"></div>
+        <div id="children" class="children hidden"></div>
         <div id="rewards" class="rewards hidden"></div>
         <div id="electronics" class="electronics hidden"></div>
         <div id="marketplace" class="marketplace hidden"></div>
     </div>
 
     <!-- Scripts -->
+    <script src="js/database.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/sparkCalculator.js"></script>
     <script src="js/dashboard.js"></script>    
@@ -101,5 +112,6 @@
     <script src="js/rewards.js"></script>
     <script src="js/marketplace.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/addChild.js"></script>
 </body>
 </html>

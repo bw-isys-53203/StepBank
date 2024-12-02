@@ -69,41 +69,202 @@ class AuthManager {
     }
  */
     async handleLogin(username, password) {
-        const hardcodedUser = this.hardcodedUsers[username];
-        if (hardcodedUser && password === hardcodedUser.password) {
+        try {
+            // Get all users from Firebase
+            const users = await db.getUsers();
+     
+            if (!users) {
+                this.showError('loginForm', 'Invalid credentials');
+                return;
+            }
+     
+            // Find user with matching username
+            const user = Object.entries(users).find(([id, userData]) => 
+                userData.username === username
+            );
+     
+            if (!user) {
+                this.showError('loginForm', 'Invalid credentials');
+                return;
+            }
+     
+            const [userId, userData] = user;
+     
+            // Check password
+            const hashedPassword = this.hashPassword(password);
+            if (hashedPassword !== userData.passwordHash) {
+                this.showError('loginForm', 'Invalid credentials');
+                return;
+            }
+     
+            // Set current user with minimal required data
             this.currentUser = {
-                username,
-                id: hardcodedUser.id,  // Explicitly set these properties
-                isParent: hardcodedUser.isParent
+                userId,
+                username: userData.username,
+                accountType: userData.accountType,
+                parentId: userData.parentId // Only exists for child accounts
             };
+     
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
             showSection('dashboard');
-            return;
+     
+            console.log('Login successful!');
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showError('loginForm', 'Login failed. Please try again.');
         }
-        this.showError('loginForm', 'Invalid credentials');
+     }
+
+    handleAccountTypeChange() {
+        const accountType = document.getElementById('accountType').value;
+        const tokenGroup = document.getElementById('tokenGroup');
+        
+        if (accountType === 'child') {
+            tokenGroup.style.display = 'block';
+        } else {
+            tokenGroup.style.display = 'none';
+        }
     }
 
-    async handleRegister(username, password, isParent) {
+    async handleRegister(username, password) {
         if (!this.validateCredentials(username, password)) {
             return;
         }
- 
+        const accountType = document.getElementById('accountType').value;
+        if (accountType === 'child') {
+            const token = document.getElementById('registrationToken').value;
+            await this.handleChildRegistration(username, password, token);
+        } else {
+            await this.handleParentRegistration(username, password);
+        }
+    }
+
+    async handleParentRegistration(username, password) {
         try {
-            // Simulate registration
-            this.currentUser = {
+            const passwordHash = this.hashPassword(password);
+            
+            // Create parent user object
+            const userData = {
+                userId: 'user_' + Math.random().toString(36).substr(2, 9),
                 username,
-                isParent,
-                id: 'user_' + Math.random().toString(36).substr(2, 9)
+                passwordHash,
+                accountType: 'parent',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
             };
- 
-            // Store user data
+    
+            // Save to Firebase
+            await db.set(`users/${userData.userId}`, userData);
+            
+            // Store user data locally
+            this.currentUser = userData;
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
             
             // Navigate to dashboard
             showSection('dashboard');
+    
+            console.log('Parent registered successfully!');
         } catch (error) {
+            console.error('Parent registration error:', error);
             this.showError('registerForm', 'Registration failed. Please try again.');
         }
+    }
+
+    async handleParentRegistration(username, password) {
+        try {
+            const passwordHash = this.hashPassword(password);
+            
+            // Create parent user object
+            const userData = {
+                userId: 'user_' + Math.random().toString(36).substr(2, 9),
+                username,
+                passwordHash,
+                accountType: 'parent',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+
+            // Save to Firebase
+            await db.set(`users/${userData.userId}`, userData);
+            
+            // Store user data locally
+            this.currentUser = userData;
+            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+            
+            // Navigate to dashboard
+            showSection('dashboard');
+
+            console.log('Parent registered successfully!');
+        } catch (error) {
+            console.error('Parent registration error:', error);
+            this.showError('registerForm', 'Registration failed. Please try again.');
+        }
+    }
+
+    async handleChildRegistration(username, password, token) {
+        try {
+            // First, find parent using registration token
+            const parent = await db.getParentByToken(token);
+            
+            if (!parent) {
+                this.showError('registerForm', 'Invalid registration token.');
+                return;
+            }
+    
+            // Find the child using token
+            let childId;
+            let childData;
+            
+            for (const [id, child] of Object.entries(parent.children || {})) {
+                if (child.registrationToken === token) {
+                    childId = id;
+                    childData = child;
+                    break;
+                }
+            }
+    
+            if (!childData) {
+                this.showError('registerForm', 'Invalid registration token.');
+                return;
+            }
+    
+            if (childData.isRegistered) {
+                this.showError('registerForm', 'This token has already been used.');
+                return;
+            }
+    
+            const passwordHash = this.hashPassword(password);
+    
+            // Create new child user
+            const userData = {
+                userId: childId, // Use the same childId as userId
+                username,
+                passwordHash,
+                accountType: 'child',
+                parentId: parent.userId,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+    
+            // Save child as a new user
+            await db.set(`users/${childId}`, userData);
+    
+            // Update parent's child record to mark as registered
+            await db.set(`users/${parent.userId}/children/${childId}/isRegistered`, true);
+    
+            // Store user data locally
+            this.currentUser = userData;
+            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+    
+            // Navigate to dashboard
+            showSection('dashboard');
+    
+            console.log('Child registered successfully!');
+        } catch (error) {
+            console.error('Child registration error:', error);
+            this.showError('registerForm', 'Registration failed. Please try again.');
+        }
+    }
+
+    hashPassword(password) {
+        return btoa(password);
     }
  
     validateCredentials(username, password) {
@@ -149,7 +310,7 @@ class AuthManager {
         document.getElementById('loginPassword').value = '';
         document.getElementById('registerUsername').value = '';
         document.getElementById('registerPassword').value = '';
-        document.getElementById('isParent').checked = false;
+        document.getElementById('accountType').value = '';
     }
  
     checkAuthState() {
