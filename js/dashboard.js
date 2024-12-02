@@ -340,9 +340,34 @@ class DashboardManager {
     renderParentDashboard(container) {
         console.log("rendering parent dashboard with selectedChildId:", this.selectedChildId);
         console.log("children array:", this.children);
+
+        // Check if there are any children
+        if (!this.children || this.children.length === 0) {
+            container.innerHTML = `
+                <nav class="nav">
+                    <div class="logo">
+                        <div class="logo-icon"></div>
+                        <span>Parent Dashboard</span>
+                    </div>
+                    <div class="nav-buttons">
+                        <button class="btn" onclick="showSection('children')">Children</button>
+                        <button class="btn" onclick="handleLogout()">Logout</button>
+                    </div>
+                </nav>
+
+                <div class="no-children-message">
+                    <h3>No Children Added Yet</h3>
+                    <p>Click on 'Children' button to add your first child.</p>
+                </div>
+            `;
+            return;
+        }
+        
         const selectedChild = this.children.find(child => child.id === this.selectedChildId);
         
-        if (!selectedChild) return;
+        if (!selectedChild) {
+            this.selectedChildId = this.children[0].id;
+        }
 
         container.innerHTML = `
             <nav class="nav">
