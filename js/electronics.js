@@ -18,6 +18,7 @@ class ElectronicsManager {
         // Use total available sparks from dashboard manager
         const totalAvailable = window.dashboardManager.calculateTotalAvailableSparks();
         this.timeAvailable = totalAvailable; // 1:1 conversion now
+        this.timeAvailable = 1; // Temporary for testing...
     }
 
     showNotification(message) {
