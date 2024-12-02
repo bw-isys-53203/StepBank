@@ -445,7 +445,7 @@ class DashboardManager {
             </div>
             <div class="bottom-nav">
                 <button class="nav-btn" onclick="showSection('family')">
-                    <i class="family-icon">👨<200d>👩<200d>👧<200d>👦</i>
+                    <i class="family-icon">👨‍👩‍👧‍👦</i>
                     <span>Family</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('settings')">
