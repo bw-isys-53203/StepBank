@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/electronics.css">
     <link rel="stylesheet" type="text/css" href="css/pendingApprovals.css">
     <link rel="stylesheet" type="text/css" href="css/addChild.css">
+    <link rel="stylesheet" type="text/css" href="css/device.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-database-compat.min.js"></script>
@@ -100,6 +101,8 @@
         <div id="rewards" class="rewards hidden"></div>
         <div id="electronics" class="electronics hidden"></div>
         <div id="marketplace" class="marketplace hidden"></div>
+        <div id="device" class="device hidden"></div>
+        <div id="fitbit" class="fitbit hidden"></div>
     </div>
 
     <!-- Scripts -->
@@ -113,5 +116,36 @@
     <script src="js/marketplace.js"></script>
     <script src="js/main.js"></script>
     <script src="js/addChild.js"></script>
+    <script src="js/trackingDevice.js"></script>
+    <script src="js/fitbit.js"></script>
+    <!-- Add the auth redirect handler -->
+    <script>
+        console.log('Setting up Fitbit redirect handler...');
+        document.addEventListener('DOMContentLoaded', async () => {
+            
+            if (window.location.search.includes('code=')) {
+                console.log('Found Fitbit auth code in URL');
+                try {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const code = urlParams.get('code');
+                    const state = urlParams.get('state');
+                    if (window.fitbitManager) {
+                        await window.fitbitManager.handleAuthRedirect(code, state);
+                        console.log('Auth redirect handled successfully');
+                        // Clean up URL by removing parameters
+                        const cleanUrl = window.location.href.split('?')[0];
+                        window.history.replaceState({}, document.title, cleanUrl);
+                        // Refresh the page to start clean
+                        //window.location.reload();
+                        showSection('device');
+                    } else {
+                        console.error('FitbitManager not initialized');
+                    }
+                } catch (error) {
+                    console.error('Fitbit auth redirect failed:', error);
+                }
+            }
+        });
+    </script>
 </body>
 </html>

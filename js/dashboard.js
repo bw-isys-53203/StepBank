@@ -15,14 +15,24 @@ class DashboardManager {
         };
         this.currentMetric = 'steps';
         this.switchMetric = this.switchMetric.bind(this);
-
+        this.isConnected = false;
+        this.storedActivityDataInDB = null;
     }
 
     async initialize(user) {
-        console.log("In dashboard initialize");
         this.currentUser = user;
+        //this.isConnected = true;
         await this.loadConfig();
-        
+
+        // Check if Fitbit is connected and fetch data
+        this.isConnected = await db.isFitbitDeviceConnected(this.currentUser.userId);
+        if (this.isConnected) {
+            await this.fetchFitbitData();
+        }
+        if(this.currentUser.accountType === 'child') {
+            this.storedActivityDataInDB = await db.getActivityDataForPastDays(this.currentUser.userId);
+            console.log("storedActivityDataInDB:: ", this.storedActivityDataInDB);
+        }
         // Initialize screen time usage after sparkCalculator is ready
         this.screenTimeUsage = {
             child1: await this.generateScreenTimeUsage('child1'),
@@ -259,35 +269,35 @@ class DashboardManager {
     }
 
     getTotalSteps() {
-        if (this.currentUser.accountType === 'child') {
+        /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.steps || 0;
-        }
+        }*/
         return this.currentActivityData.steps;
     }
 
     getActivityMinutes() {
-        if (this.currentUser.accountType === 'child') {
+        /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
-        }
+        }*/
         return this.currentActivityData.minutes;
     }
 
     getActivityTime() {
         let minutes;
-        if (this.currentUser.accountType === 'child') {
+        /*if (this.currentUser.accountType === 'child') {
             minutes = this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
-        } else {
+        } else {*/
             minutes = this.currentActivityData.minutes;
-        }
+        //}
         const hours = Math.floor(minutes / 60);
         const remainingMinutes = minutes % 60;
         return `${hours}h ${remainingMinutes}m`;
     }
 
     getAverageHR() {
-        if (this.currentUser.accountType === 'child') {
+        /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.avgHeartRate || 0;
-        }
+        }*/
         return this.currentActivityData.heartRate;
     }
 
@@ -321,7 +331,6 @@ class DashboardManager {
         if (this.currentUser.accountType === 'parent') {
             this.renderParentDashboard(dashboardContainer);
         } else if (this.currentUser.accountType === 'child') {
-            console.log("In renderDashboard child")
             this.renderChildDashboard(dashboardContainer);
         } else {
             console.error('Invalid account type');
@@ -457,6 +466,9 @@ class DashboardManager {
                     <span>StepBank</span>
                 </div>
                 <div class="nav-buttons">
+                    <button class="btn connect-btn ${this.isConnected ? 'active' : ''}" onclick="showSection('device')">
+                    ${this.isConnected ? 'Device Connected' : 'Connect Device'}
+                </button>
                     <button class="btn" onclick="handleLogout()">Logout</button>
                 </div>
             </nav>
@@ -990,6 +1002,61 @@ class DashboardManager {
             console.log('Spark Calculation Result:', result);
         } else {
             console.log('Spark Calculator not initialized!');
+        }
+    }
+    async fetchFitbitData() {
+        try {
+            const deviceConfig = await db.getDeviceConfig(this.currentUser.userId);
+            if (!deviceConfig?.accessToken) {
+                console.log('No Fitbit access token found');
+                return null;
+            }
+            const accessToken = await window.fitbitManager.getFitbitAccessToken(this.currentUser.userId);
+            const clientId = localStorage.getItem('clientId')    
+            const today = new Date().toLocaleDateString('en-CA').split('T')[0];  // Format: YYYY-MM-DD
+            
+            // Fetch activity data
+            const activityResponse = 
+                await fetch(`https://api.fitbit.com/1/user/${clientId}/activities/date/${today}.json`, 
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                }
+            });
+    
+            if (!activityResponse.ok) {
+                throw new Error(`HTTP error! status: ${activityResponse.status}`);
+            }
+    
+            const activityData = await activityResponse.json();
+            console.log("ActivityData:: ", activityData);
+    
+            // Update dashboard with new data
+            this.currentActivityData = {
+                steps: activityData.summary.steps || 0,
+                minutes: activityData.summary.veryActiveMinutes || 0,
+                heartRate: activityData.summary.averageHeartRate || 0
+            };
+    
+            // Store activity data
+            if (this.currentUser.accountType === 'child') {
+                this.storedActivityData = {
+                    [this.currentUser.userId]: [{
+                        steps: this.currentActivityData.steps,
+                        duration: this.currentActivityData.minutes,
+                        avgHeartRate: this.currentActivityData.heartRate,
+                        timestamp: new Date().toISOString()
+                    }]
+                };
+                console.log("storedActivityData:: ", this.storedActivityData);
+            }
+            await db.saveActivityForDay(this.currentUser.userId, today, this.currentActivityData);
+            return activityData;
+    
+        } catch (error) {
+            console.error('Error fetching Fitbit data:', error);
+            return null;
         }
     }
 }

@@ -2,7 +2,8 @@
 // Global navigation function
 // In main.js
 function showSection(sectionId) {
-    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 'electronics', 'pendingApprovals', 'children'];
+    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 
+        'electronics', 'pendingApprovals', 'children', 'device', 'fitbit'];
     
     // Cleanup any active timers/state when switching sections
     if (window.electronicsManager && sectionId !== 'electronics') {
@@ -17,7 +18,6 @@ function showSection(sectionId) {
     // Initialize relevant manager based on section
     switch (sectionId) {
         case 'dashboard':
-            console.log("In show section dashboard");
             window.dashboardManager.initialize(window.authManager.currentUser);
             break;
         case 'pendingApprovals':
@@ -34,7 +34,13 @@ function showSection(sectionId) {
             break;
         case 'children':
             window.addChildManager.initialize(window.authManager.currentUser);
-            break;    
+            break;
+        case 'device':
+            window.deviceManager.initialize(window.authManager.currentUser);
+            break;
+        case 'fitbit':
+            window.fitbitManager.initialize(window.authManager.currentUser);
+            break;  
     }
 }
 
@@ -59,7 +65,7 @@ function handleLogout() {
 }
 
 // Also ensure the DOMContentLoaded handler initializes everything properly:
-document.addEventListener('DOMContentLoaded', () => {
+/*document.addEventListener('DOMContentLoaded', () => {
     // Initialize all managers
     window.authManager = new AuthManager();
     window.dashboardManager = new DashboardManager();
@@ -73,4 +79,33 @@ document.addEventListener('DOMContentLoaded', () => {
         window.dashboardManager.initialize(window.authManager.currentUser);
         showSection('dashboard');
     }
+});*/
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Create an async function
+    const initializeApp = async () => {
+        try {
+            // Wait for database to be ready
+            await window.dbReady;
+            
+            // Initialize all managers
+            window.authManager = new AuthManager();
+            window.dashboardManager = new DashboardManager();
+            window.rewardsManager = new RewardsManager();
+            window.marketplaceManager = new MarketplaceManager();
+
+            // Check if user is already logged in
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                window.authManager.currentUser = JSON.parse(savedUser);
+                await window.dashboardManager.initialize(window.authManager.currentUser);
+                showSection('dashboard');
+            }
+        } catch (error) {
+            console.error('Error initializing app:', error);
+        }
+    };
+
+    // Call the async function
+    initializeApp();
 });
