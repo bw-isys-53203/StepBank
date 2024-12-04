@@ -3,33 +3,55 @@
  "version": "1.0.0",
  "main": "main.js",
  "scripts": {
-    "start": "set NODE_ENV=development && electron .",
-    "start:prod": "set NODE_ENV=production && electron .",
-    "build": "set NODE_ENV=development && electron-builder --config.productName=electron-stepbank-dev",
-    "build:prod": "set NODE_ENV=production && electron-builder --config.productName=electron-stepbank-prod"
+    "start": "electron main.dev.js",
+    "start:prod": "electron main.prod.js",
+    "prebuild": "copy .\\main.dev.js .\\main.js",
+    "prebuild:prod": "copy .\\main.prod.js .\\main.js",
+    "build": "electron-builder --config.productName=electron-stepbank-dev",
+    "build:prod": "electron-builder --config.productName=electron-stepbank-prod",
+    "postbuild": "del .\\main.js",
+    "postbuild:prod": "del .\\main.js"
   },
  "devDependencies": {
    "electron": "^27.3.11",
    "electron-builder": "^24.9.1"
  },
   "build": {
-   "appId": "com.stepbank.app",
-   "productName": "electron-stepbank",
-   "files": [
-     "**/*"
-   ],
-   "extraResources": [
-     {
-       "from": "./plug.py",
-       "to": "./plug.py"
-     }
-   ],
-   "win": {
-     "target": "portable"
-   }
- },
+    "appId": "com.stepbank.app",
+    "productName": "electron-stepbank",
+    "files": [
+      "**/*",
+      "!main.dev.js",
+      "!main.prod.js",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.env",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.gitignore,.gitattributes,.editorconfig,.flowconfig,.yarn-metadata.json,.idea,appveyor.yml,.travis.yml,circle.yml,npm-debug.log,.nyc_output,yarn.lock,.yarn-integrity}"
+    ],
+    "extraResources": [
+      {
+        "from": "plug.py",
+        "to": "plug.py"
+      },
+      {
+        "from": "tray-icon.png",
+        "to": "tray-icon.png"
+      }
+    ],
+    "win": {
+      "target": "portable"
+    }
+  },
  "dependencies": {
    "cors": "^2.8.5",
    "express": "^4.21.1"
- }
+ },
+ "author": {
+   "name": "StepBank Developer"
+ },
+ "description": "StepBank Controller Application"
 }
