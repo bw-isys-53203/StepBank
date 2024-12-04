@@ -452,6 +452,21 @@ class DashboardManager {
                     <canvas id="activityChart"></canvas>
                 </div>
             </div>
+            <div class="bottom-nav">
+                <button class="nav-btn" onclick="showSection('family')">
+                    <i class="family-icon">👨‍👩‍👧‍👦</i>
+                    <span>Family</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('settings')">
+                    <i class="settings-icon">⚙️</i>
+                    <span>Settings</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('messages')">
+                    <i class="message-icon">💬</i>
+                    <span>Messages</span>
+                </button>
+            </div>
+
         `;
 
         this.updateChart(selectedChild.id);
@@ -1004,6 +1019,7 @@ class DashboardManager {
             console.log('Spark Calculator not initialized!');
         }
     }
+
     async fetchFitbitData() {
         try {
             const deviceConfig = await db.getDeviceConfig(this.currentUser.userId);
@@ -1059,6 +1075,66 @@ class DashboardManager {
             return null;
         }
     }
+
+   renderSettings() {
+        // Check user type using accountType
+        if (this.currentUser?.accountType === 'parent') {
+            this.renderParentSettings();
+        } else {
+            this.renderChildSettings();
+        }
+    }
+
+    renderParentSettings() {
+        const container = document.getElementById('settings');
+        container.innerHTML = `
+            <nav class="nav">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <span>Parent Settings</span>
+                </div>
+                <button class="btn" onclick="showSection('dashboard')">Back</button>
+            </nav>
+
+            <div class="settings-container">
+                <div id="device-config-panel"></div>
+            </div>`;
+
+        // Initialize device configuration panel
+        window.deviceConfigManager.renderConfigurationPanel(
+            document.getElementById('device-config-panel')
+        );
+    }
+
+    renderChildSettings() {
+        const container = document.getElementById('settings');
+        container.innerHTML = `
+            <nav class="nav">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <span>Settings</span>
+                </div>
+                <button class="btn" onclick="showSection('dashboard')">Back</button>
+            </nav>
+
+            <div class="settings-container">
+                <div class="settings-section">
+                    <h2>Notification Preferences</h2>
+                    <!-- Add child notification settings -->
+                </div>
+
+                <div class="settings-section">
+                    <h2>Display Preferences</h2>
+                    <!-- Add display settings -->
+                </div>
+
+                <div class="settings-section">
+                    <h2>Account Settings</h2>
+                    <!-- Add account settings -->
+                </div>
+            </div>`;
+    }
+
 }
 
 // Initialize dashboard manager
