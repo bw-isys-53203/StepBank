@@ -1,15 +1,56 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Tray, Menu } = require('electron');
 const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
-// Use environment variable for URL selection
-const APP_URL = process.env.NODE_ENV === 'production'
+let tray = null;
+let mainWindow = null;
+
+// Function to get the correct icon path
+function getIconPath() {
+    if (app.isPackaged) {
+        return path.join(process.resourcesPath, 'tray-icon.png');
+    }
+    return path.join(__dirname, 'tray-icon.png');
+}
+
+// Environment detection with more robust fallback
+let BUILD_ENV = 'development';
+
+// First try reading from .env file
+try {
+    const envPath = path.join(process.resourcesPath, '.env');
+    console.log('Checking for .env at:', envPath);
+    
+    if (fs.existsSync(envPath)) {
+        BUILD_ENV = fs.readFileSync(envPath, 'utf8').trim();
+        console.log('Found .env file, BUILD_ENV set to:', BUILD_ENV);
+    }
+} catch (error) {
+    console.error('Error reading .env file:', error);
+}
+
+// Then check NODE_ENV environment variable
+if (process.env.NODE_ENV) {
+    BUILD_ENV = process.env.NODE_ENV;
+    console.log('Using NODE_ENV value:', BUILD_ENV);
+}
+
+// Finally, check if we're packaged (additional production check)
+if (app.isPackaged) {
+    console.log('App is packaged, forcing production environment');
+    BUILD_ENV = 'production';
+}
+
+console.log('Final BUILD_ENV:', BUILD_ENV);
+
+// Set the URL based on environment
+const APP_URL = BUILD_ENV === 'production'
     ? 'https://bw-isys-53203.github.io/StepBank/'
     : 'http://127.0.0.1:5500/newprog/StepBank/index.html';
 
-console.log('Current NODE_ENV:', process.env.NODE_ENV);
 console.log('Using APP_URL:', APP_URL);
 
 function getScriptPath() {
@@ -22,6 +63,7 @@ function getScriptPath() {
 }
 
 function setupServer() {
+    console.log('Setting up Express server...');
     const server = express();
     server.use(cors());
     server.use(express.json());
@@ -53,40 +95,124 @@ function setupServer() {
     });
 }
 
+function createTray() {
+    try {
+        const iconPath = getIconPath();
+        console.log('Attempting to create tray with icon path:', iconPath);
+        
+        if (!fs.existsSync(iconPath)) {
+            console.error('Tray icon not found at:', iconPath);
+            throw new Error('Tray icon not found');
+        }
+
+        tray = new Tray(iconPath);
+        console.log('Tray created successfully');
+
+        const contextMenu = Menu.buildFromTemplate([
+            {
+                label: 'Show App',
+                click: () => {
+                    if (mainWindow) {
+                        mainWindow.show();
+                    }
+                }
+            },
+            {
+                label: 'Server: Running',
+                enabled: false
+            },
+            { type: 'separator' },
+            {
+                label: 'Exit',
+                click: () => {
+                    app.isQuitting = true;
+                    app.quit();
+                }
+            }
+        ]);
+
+        tray.setToolTip('StepBank Controller');
+        tray.setContextMenu(contextMenu);
+
+        // Optional: Double-click on tray icon to show window
+        tray.on('double-click', () => {
+            if (mainWindow) {
+                mainWindow.show();
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in createTray:', error);
+        // Create window as fallback if tray creation fails
+        if (mainWindow) {
+            mainWindow.show();
+        }
+    }
+}
+
 function createWindow() {
-    const win = new BrowserWindow({
+    console.log('Creating main window...');
+    mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false // Note: In production, you might want to enable this
-        }
+            contextIsolation: false
+        },
+        show: false,
     });
 
-    setupServer();
-    
-    // Add delay to ensure server is ready
     setTimeout(() => {
         console.log('Loading application from:', APP_URL);
-        win.loadURL(APP_URL);
+        mainWindow.loadURL(APP_URL);
         
-        // Open DevTools in development
-        if (process.env.NODE_ENV !== 'production') {
-            win.webContents.openDevTools();
+        if (BUILD_ENV !== 'production') {
+            mainWindow.webContents.openDevTools();
         }
     }, 1000);
+
+    mainWindow.on('close', (event) => {
+        if (!app.isQuitting) {
+            event.preventDefault();
+            mainWindow.hide();
+        }
+    });
 }
 
-app.whenReady().then(createWindow);
+// Initialize everything
+app.on('ready', () => {
+    console.log('App ready event fired');
+    setupServer();
+    createWindow();
+    createTray();
+    console.log('Initialization complete');
+});
 
 app.on('window-all-closed', () => {
+    console.log('All windows closed event');
     if (process.platform !== 'darwin') {
         app.quit();
     }
 });
 
 app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    console.log('Activate event fired');
+    if (mainWindow === null) {
         createWindow();
     }
 });
+
+app.on('before-quit', () => {
+    console.log('Before quit event fired');
+    app.isQuitting = true;
+});
+
+// Add error handling
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+    console.error('Unhandled rejection:', error);
+});
+
