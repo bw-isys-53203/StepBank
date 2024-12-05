@@ -13,19 +13,24 @@ class DashboardManager {
         this.switchMetric = this.switchMetric.bind(this);
         this.isConnected = false;
         this.storedActivityDataInDB = null;
+        this.screenTimeUsage = {}; // Will store all generated screen time data
+        this.generatedScreenTimeIds = new Set(); // Track which IDs have been generated
     }
 
     async initialize(user) {
         this.currentUser = user;
-        //this.isConnected = true;
         await this.loadConfig();
 
         if (this.currentUser.accountType === 'parent') {
             const childrenSnapshot = await db.getParentChildren(this.currentUser.userId);
             
             if (childrenSnapshot) {
-                this.screenTimeUsage = {};
-                // Generate screen time usage for each registered child
+                // Don't reset screenTimeUsage if it already exists
+                if (!Object.keys(this.screenTimeUsage).length) {
+                    this.screenTimeUsage = {};
+                }
+
+                // Process each child
                 for (const [childId, childData] of Object.entries(childrenSnapshot)) {
                     if (childData.isRegistered) {
                         this.isConnected = await db.isFitbitDeviceConnected(childId);
@@ -33,7 +38,15 @@ class DashboardManager {
                             await this.fetchFitbitData(childId);
                         }
                         this.storedActivityDataInDB = await db.getActivityDataForPastDays(childId);
-                        this.screenTimeUsage[childId] = await this.generateScreenTimeUsage(childId);
+                        
+                        // Only generate screen time if not already generated
+                        if (!this.generatedScreenTimeIds.has(childId)) {
+                            this.screenTimeUsage[childId] = await this.generateScreenTimeUsage(childId);
+                            this.generatedScreenTimeIds.add(childId);
+                            console.log(`Generated screen time for child: ${childId}`);
+                        } else {
+                            console.log(`Skipping screen time generation for child: ${childId} (already exists)`);
+                        }
                     }
                 }
             }
@@ -44,10 +57,15 @@ class DashboardManager {
                 await this.fetchFitbitData(this.currentUser.userId);
             }
             this.storedActivityDataInDB = await db.getActivityDataForPastDays(this.currentUser.userId);
-            // If it's a child user, only generate their own screen time usage
-            this.screenTimeUsage = {
-                [this.currentUser.userId]: await this.generateScreenTimeUsage(this.currentUser.userId)
-            };
+            
+            // Only generate screen time if not already generated (by parent or previous child session)
+            if (!this.generatedScreenTimeIds.has(this.currentUser.userId)) {
+                this.screenTimeUsage[this.currentUser.userId] = await this.generateScreenTimeUsage(this.currentUser.userId);
+                this.generatedScreenTimeIds.add(this.currentUser.userId);
+                console.log(`Generated screen time for child user: ${this.currentUser.userId}`);
+            } else {
+                console.log(`Skipping screen time generation for child user: ${this.currentUser.userId} (already exists)`);
+            }
         }
         
         await this.loadDashboardData();
@@ -101,7 +119,7 @@ class DashboardManager {
         const usage = [];
         const now = new Date();
         
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 8; i++) {
             const date = new Date(now - i * 24 * 60 * 60 * 1000);
             const dateStr = date.toISOString().split('T')[0];
             
@@ -122,7 +140,7 @@ class DashboardManager {
                 }, 0);
     
                 const maxUsage = Math.min(availableMinutes, 120);
-                const actualUsage = Math.floor(Math.random() * maxUsage);
+                const actualUsage = Math.min(Math.floor(Math.random() * maxUsage), availableMinutes / 100);
     
                 console.log('Generated usage for day:', {
                     date: dateStr,
@@ -686,11 +704,12 @@ class DashboardManager {
         setTimeout(() => sparkle.remove(), 1000);
     }
 
-    /*updateGoals() {
+    async updateGoals() {
         const stepsGoal = parseInt(document.getElementById('stepsGoal').value);
         const activeTimeGoal = parseInt(document.getElementById('activeTimeGoal').value);
         const heartRateGoal = parseInt(document.getElementById('heartRateGoal').value);
-    
+        
+        // Validate input values
         if (isNaN(stepsGoal) || stepsGoal <= 0 || 
             isNaN(activeTimeGoal) || activeTimeGoal <= 0 ||
             isNaN(heartRateGoal) || heartRateGoal <= 0) {
@@ -698,57 +717,34 @@ class DashboardManager {
             return;
         }
         
-        const childIndex = this.children.findIndex(child => child.id === this.selectedChildId);
-        if (childIndex !== -1) {
-            this.children[childIndex].dailyGoal = stepsGoal;
-            this.children[childIndex].activeTimeGoal = activeTimeGoal;
-            this.children[childIndex].heartRateGoal = heartRateGoal;
-            this.showNotification('Goals updated successfully!');
-            this.renderDashboard();
-        }
-    }*/
-
-        async updateGoals() {
-            const stepsGoal = parseInt(document.getElementById('stepsGoal').value);
-            const activeTimeGoal = parseInt(document.getElementById('activeTimeGoal').value);
-            const heartRateGoal = parseInt(document.getElementById('heartRateGoal').value);
+        try {
+            // Update in local array
+            const childIndex = this.children.findIndex(child => child.id === this.selectedChildId);
+            if (childIndex !== -1) {
+                // Update local data
+                this.children[childIndex].dailyGoal = stepsGoal;
+                this.children[childIndex].activeTimeGoal = activeTimeGoal;
+                this.children[childIndex].heartRateGoal = heartRateGoal;
         
-            // Validate input values
-            if (isNaN(stepsGoal) || stepsGoal <= 0 || 
-                isNaN(activeTimeGoal) || activeTimeGoal <= 0 ||
-                isNaN(heartRateGoal) || heartRateGoal <= 0) {
-                this.showNotification('Please enter valid goal values');
-                return;
+                // Update in Firebase
+                await db.updateChildGoals(
+                    this.currentUser.userId, 
+                    this.selectedChildId, 
+                    {
+                        steps: stepsGoal,
+                        activeTime: activeTimeGoal,
+                        heartRate: heartRateGoal
+                    }
+                );
+    
+                this.showNotification('Goals updated successfully!');
+                this.renderDashboard();
             }
-        
-            try {
-                // Update in local array
-                const childIndex = this.children.findIndex(child => child.id === this.selectedChildId);
-                if (childIndex !== -1) {
-                    // Update local data
-                    this.children[childIndex].dailyGoal = stepsGoal;
-                    this.children[childIndex].activeTimeGoal = activeTimeGoal;
-                    this.children[childIndex].heartRateGoal = heartRateGoal;
-        
-                    // Update in Firebase
-                    await db.updateChildGoals(
-                        this.currentUser.userId, 
-                        this.selectedChildId, 
-                        {
-                            steps: stepsGoal,
-                            activeTime: activeTimeGoal,
-                            heartRate: heartRateGoal
-                        }
-                    );
-        
-                    this.showNotification('Goals updated successfully!');
-                    this.renderDashboard();
-                }
-            } catch (error) {
-                console.error('Error updating goals:', error);
-                this.showNotification('Failed to update goals. Please try again.');
-            }
+        } catch (error) {
+            console.error('Error updating goals:', error);
+            this.showNotification('Failed to update goals. Please try again.');
         }
+    }
 
     getChildStats(childId) {
         const child = this.children.find(c => c.id === childId);
@@ -774,76 +770,42 @@ class DashboardManager {
         }*/
         return this.storedActivityDataInDB[childId];
     }
-/*
-    calculateTotalAvailableSparks() {
-        if (this.currentUser.accountType === 'child') {
-            const activities = this.getChildActivityData(this.currentUser.id);
-            // Get last 7 days of activities
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            
-            const recentActivities = activities.filter(activity => 
-                new Date(activity.timestamp) >= sevenDaysAgo
-            );
-    
-            let totalEarned = 0;
-            recentActivities.forEach(activity => {
-                const sparkResult = this.sparkCalculator.calculateSparks(
-                    activity.steps,
-                    activity.duration,
-                    activity.avgHeartRate
-                );
-                totalEarned += sparkResult.sparkPoints;
-            });
-    
-            return totalEarned;
-        }
-        return 0;
-    }
-*/
-
-    /*calculateTotalAvailableSparks() {
-        if (this.currentUser.accountType === 'child') {
-            const screenTimeData = this.screenTimeUsage[this.currentUser.id];
-            // Sum all available minutes from the last 7 days
-            const totalAvailable = 100
-            //const totalAvailable = screenTimeData.reduce((total, day) => total + day.availableMinutes, 0);
-            // Sum all used minutes
-            const totalUsed = 100
-            //const totalUsed = screenTimeData.reduce((total, day) => total + day.minutes, 0);
-        
-            // Store this value to ensure consistency across screens
-            if (!this._cachedTotalAvailable) {
-                this._cachedTotalAvailable = totalAvailable - totalUsed;
-            }
-        
-            return this._cachedTotalAvailable;
-        }
-        return 0;
-    }*/
 
     calculateTotalAvailableSparks() {
         try {
-            // Check if there's stored data
             if (!this.storedActivityDataInDB) {
                 console.log('No activity data found');
                 return 0;
             }
     
-            // Get current user's data array
             const userActivities = this.storedActivityDataInDB[this.currentUser.userId];
             if (!Array.isArray(userActivities)) {
                 console.log('No activities found for user');
                 return 0;
             }
     
-            // Sum up all points
-            const totalPoints = userActivities.reduce((sum, activity) => {
+            // Calculate total earned points
+            const totalEarnedPoints = userActivities.reduce((sum, activity) => {
                 return sum + (activity.points || 0);
             }, 0);
     
-            return Math.round(totalPoints);
+            const screenTimeData = this.screenTimeUsage[this.currentUser.userId];
+            if (!screenTimeData) {
+                console.log('No screen time data found');
+                return totalEarnedPoints;
+            }
     
+            // Calculate total used points
+            const totalUsedPoints = screenTimeData.reduce((sum, day) => {
+                return sum + (day.minutes * 100);
+            }, 0);
+    
+            const netAvailable = totalEarnedPoints - totalUsedPoints;
+            console.log('Total earned:', totalEarnedPoints);
+            console.log('Total used:', totalUsedPoints);
+            console.log('Net available:', netAvailable);
+            
+            return Math.max(0, Math.round(netAvailable));
         } catch (error) {
             console.error('Error calculating total points:', error);
             return 0;
@@ -977,27 +939,77 @@ class DashboardManager {
         });
      }
 
-    prepareChartData(activities, metric) {
+     prepareChartData(activities, metric) {
         if (metric === 'screenTime') {
             const screenTimeData = this.screenTimeUsage[this.selectedChildId];
             const sortedData = screenTimeData.sort((a, b) => new Date(a.date) - new Date(b.date));
             
-            // Calculate total available (running total)
-            const totalAvailable = sortedData.reduce((total, day) => 
-                total + (day.availableMinutes - day.minutes), 0);
+            // Get all activity data for this child
+            const userActivities = this.storedActivityDataInDB[this.selectedChildId];
+            
+            // Calculate total earned points (same as calculateTotalAvailableSparks)
+            const totalEarnedPoints = userActivities.reduce((sum, activity) => {
+                return sum + (activity.points || 0);
+            }, 0);
+            
+            // Calculate running used total and net available
+            let usedTotal = 0;
+            const netAvailableData = sortedData.map(day => {
+                usedTotal += (day.minutes * 100);
+                return totalEarnedPoints - usedTotal;
+            });
+    
+            // Calculate daily available spark using sparkCalculator
+            const dailyAvailableSpark = sortedData.map(day => {
+                const dayActivities = userActivities.filter(activity => 
+                    activity.day === day.date
+                );
+                
+                // For each day, if we have steps and minutes, calculate sparks
+                if (dayActivities.length > 0) {
+                    const activity = dayActivities[0];
+                    if (activity.steps && activity.duration) {
+                        console.log(`Calculating sparks for ${day.date}:`, {
+                            steps: activity.steps,
+                            duration: activity.duration,
+                            avgHeartRate: activity.avgHeartRate || 0
+                        });
+                        
+                        const result = this.sparkCalculator.calculateSparks(
+                            activity.steps,
+                            activity.duration,
+                            activity.avgHeartRate || 0  // Default to 0 if not available
+                        );
+                        console.log(`Spark result for ${day.date}:`, result);
+                        return result.sparkPoints;
+                    }
+                }
+                console.log(`No valid activity data for ${day.date}`);
+                return 0;
+            });
+    
+            // Log values to verify calculations
+            console.log('Parent View Calculations:', {
+                childId: this.selectedChildId,
+                totalEarned: totalEarnedPoints,
+                finalUsedTotal: usedTotal,
+                finalNetAvailable: netAvailableData[netAvailableData.length - 1],
+                dates: sortedData.map(d => d.date),
+                dailyAvailable: dailyAvailableSpark
+            });
     
             return {
                 labels: sortedData.map(day => new Date(day.date).toLocaleDateString()),
                 datasets: [{
-                    label: 'Used Screen Time',
-                    data: sortedData.map(day => day.minutes),
+                    label: 'Daily Used Spark',
+                    data: sortedData.map(day => day.minutes * 100),
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
                     tension: 0.4,
                     fill: true
                 }, {
-                    label: 'Daily Available Time',
-                    data: sortedData.map(day => day.availableMinutes),
+                    label: 'Daily Available Spark',
+                    data: dailyAvailableSpark,
                     borderColor: '#2E7D32',
                     backgroundColor: 'rgba(46, 125, 50, 0.2)',
                     tension: 0.4,
@@ -1005,8 +1017,8 @@ class DashboardManager {
                     borderDash: [5, 5],
                     fill: false
                 }, {
-                    label: `Total Available: ${totalAvailable} minutes`,
-                    data: sortedData.map(() => totalAvailable),
+                    label: 'Total Available Spark',
+                    data: netAvailableData,
                     borderColor: '#1B5E20',
                     borderWidth: 2,
                     borderDash: [10, 5],
@@ -1014,14 +1026,14 @@ class DashboardManager {
                 }]
             };
         } else {
-            // Existing logic for other metrics
+            // Handle other metrics (steps, activeTime, heartRate)
             const data = {
                 labels: [],
                 values: []
             };
             console.log("prepareChartData activities:: ", activities);
             const dailyData = activities.reduce((acc, activity) => {
-                const date = activity.day;//new Date(activity.timestamp).toLocaleDateString();
+                const date = activity.day;
                 let value;
                 
                 switch(metric) {
