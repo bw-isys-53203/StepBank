@@ -1,16 +1,40 @@
-// addChild.js
+/**
+ * @fileoverview Child Management System
+ * Manages the addition and display of children profiles in the application.
+ * Handles parent-child relationships, goal setting, and registration status
+ * tracking with proper data persistence and UI updates.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Child profile management implementation
+ */
+
+/**
+ * AddChildManager class handles all operations related to adding and managing
+ * children profiles including form handling, display, and data persistence.
+ */
 class AddChildManager {
+    /**
+     * Initializes manager with empty state for current user and children
+     */
     constructor() {
         this.currentUser = null;
         this.children = [];
     }
 
+    /**
+     * Initializes the manager with user context and loads existing children
+     * 
+     * @param {Object} user - The currently logged-in parent user
+     */
     initialize(user) {
         this.currentUser = user;
         this.loadChildren();
         this.renderAddChildSection();
     }
 
+    /**
+     * Loads children data from database for current parent user
+     * Updates local state and triggers re-render of the UI
+     */
     async loadChildren() {
         try {
             const children = await db.getChildrenByParentId(this.currentUser.userId);
@@ -21,9 +45,14 @@ class AddChildManager {
         }
     }
 
+    /**
+     * Renders the complete child management interface including
+     * existing children list and add child form
+     */
     renderAddChildSection() {
         const container = document.getElementById('children');
         
+        // Generate complete interface with navigation, list, and form
         container.innerHTML = `
             <div class="add-child-container">
                 <nav class="nav">
@@ -70,12 +99,16 @@ class AddChildManager {
                         <button type="submit" class="btn submit-btn">Add Child</button>
                     </form>
                 </div>
-
-                
             </div>
         `;
     }
 
+    /**
+     * Renders list of existing children with their details and goals
+     * Includes registration status and token information
+     * 
+     * @returns {string} HTML string for children list
+     */
     renderChildrenList() {
         return `
             <div class="children-list">
@@ -104,6 +137,11 @@ class AddChildManager {
         `;
     }
 
+    /**
+     * Renders placeholder content when no children are added
+     * 
+     * @returns {string} HTML string for empty state
+     */
     renderNoChildren() {
         return `
             <div class="no-children">
@@ -112,9 +150,16 @@ class AddChildManager {
         `;
     }
 
+    /**
+     * Handles form submission for adding a new child
+     * Validates and processes form data, updates database, and refreshes display
+     * 
+     * @param {Event} event - Form submission event
+     */
     async handleAddChild(event) {
         event.preventDefault();
         
+        // Collect and format child data from form
         const childData = {
             name: document.getElementById('childName').value,
             age: parseInt(document.getElementById('childAge').value),
@@ -126,6 +171,7 @@ class AddChildManager {
         console.log("Child data:: ",childData);
 
         try {
+            // Save to database and update UI
             await db.addChild(this.currentUser.userId, childData);
             this.showNotification('Child added successfully!');
             event.target.reset();
@@ -136,12 +182,21 @@ class AddChildManager {
         }
     }
 
+    /**
+     * Displays a temporary notification message to the user
+     * Creates a toast notification that automatically fades out
+     * 
+     * @param {string} message - Message to display
+     * @param {string} type - Notification type ('success' or 'error')
+     */
     showNotification(message, type = 'success') {
+        // Create and setup notification element
         const toast = document.createElement('div');
         toast.className = `toast-notification ${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
 
+        // Handle animation timing for smooth appearance and disappearance
         setTimeout(() => toast.classList.add('visible'), 10);
         setTimeout(() => {
             toast.classList.remove('visible');
@@ -150,6 +205,6 @@ class AddChildManager {
     }
 }
 
-// Initialize manager
+// Initialize global instance of child management
 const addChildManager = new AddChildManager();
 window.addChildManager = addChildManager;
