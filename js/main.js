@@ -13,8 +13,8 @@ function showSection(sectionId) {
 	    'settings',
 	    'family',
 	    'messages',
-      'device', 
-      'fitbit'
+        'device', 
+        'fitbit'
     ];
 
     // Cleanup any active timers/state when switching sections
@@ -63,6 +63,9 @@ function showSection(sectionId) {
             break;     
         case 'settings':
             window.dashboardManager.renderSettings();
+            break;
+        case 'messages':
+            window.messageManager.initialize(window.authManager.currentUser);
             break;
     }
 }
@@ -116,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.dashboardManager = new DashboardManager();
             window.rewardsManager = new RewardsManager();
             window.marketplaceManager = new MarketplaceManager();
+            window.messageManager = new MessageManager();
 
             // Check if user is already logged in
             const savedUser = localStorage.getItem('currentUser');

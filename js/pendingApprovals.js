@@ -1,19 +1,19 @@
+// pendingApprovals.js
 class PendingApprovalsManager {
     constructor() {
         this.currentUser = null;
-        this.pendingApprovals = [
-            { id: 1, childName: 'Tommy', type: 'Marketplace Purchase', amount: 'New Balance Tennis Shoes' },
-            { id: 2, childName: 'Sarah', type: 'Marketplace Purchase', amount: 'Nintendo Switch' }
-        ];
+        this.storageKey = 'marketplaceItems';
     }
 
     initialize(user) {
         this.currentUser = user;
-        this.renderPendingApprovals();
+        this.renderApprovals();
     }
 
-    renderPendingApprovals() {
+    renderApprovals() {
         const container = document.getElementById('pendingApprovals');
+        const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+        const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
         
         container.innerHTML = `
             <nav class="nav">
@@ -23,75 +23,250 @@ class PendingApprovalsManager {
                 </div>
                 <button class="btn" onclick="showSection('dashboard')">Back</button>
             </nav>
-
+    
             <div class="approvals-container">
-                <h2>Pending Approvals</h2>
-                ${this.pendingApprovals.length > 0 ? this.renderApprovalsList() : this.renderNoApprovals()}
-            </div>
-        `;
-    }
-
-    renderApprovalsList() {
-        return `
-            <div class="approval-list">
-                ${this.pendingApprovals.map(approval => `
-                    <div class="approval-card">
-                        <div class="approval-header">
-                            <span class="child-name">${approval.childName}</span>
-                            <span class="approval-type">${approval.type}</span>
-                        </div>
-                        <div class="approval-details">
-                            <span class="approval-amount">${approval.amount}</span>
-                            <div class="approval-time">Requested 2 hours ago</div>
-                        </div>
-                        <div class="approval-actions">
-                            <button class="btn approve-btn" onclick="pendingApprovalsManager.handleApproval(${approval.id}, true)">
-                                Approve
-                            </button>
-                            <button class="btn deny-btn" onclick="pendingApprovalsManager.handleApproval(${approval.id}, false)">
-                                Deny
-                            </button>
+                ${pendingApprovals.length > 0 ? `
+                    <div class="pending-section">
+                        <h3>Pending Requests</h3>
+                        <div class="approval-requests">
+                            ${pendingApprovals.map(request => `
+                                <div class="approval-request">
+                                    <div class="request-info">
+                                        <strong>${request.childName}</strong>
+                                        <span class="item-name">${request.itemName}</span>
+                                        <span class="cost">$${request.dollarValue.toFixed(2)} (${request.cost.toLocaleString()} sparks)</span>
+                                    </div>
+                                    <div class="request-buttons">
+                                        <button class="btn approve-btn" 
+                                            onclick="pendingApprovalsManager.handleApproval('${request.id}', true)">
+                                            Approve
+                                        </button>
+                                        <button class="btn deny-btn" 
+                                            onclick="pendingApprovalsManager.handleApproval('${request.id}', false)">
+                                            Deny
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                `).join('')}
+                ` : ''}
+    
+                <div class="add-item-form">
+                    <h3>Add New Item</h3>
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" id="itemName" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Dollar Value</label>
+                        <input type="number" id="itemValue" class="form-input" step="0.01" min="0">
+                        <div class="spark-conversion">= <span id="sparkValue">0</span> sparks</div>
+                    </div>
+                    <button class="btn" onclick="pendingApprovalsManager.addItem()">Add Item</button>
+                </div>
+    
+                <div class="available-items">
+                    <h3>Available Items</h3>
+                    <div class="items-grid">
+                        ${marketplaceItems.map(item => {
+                            const displayDollars = Math.ceil(item.dollarValue * 100) / 100;
+                            return `
+                                <div class="item-card">
+                                    <div class="item-details">
+                                        <h4>${item.name}</h4>
+                                        <div class="item-value">$${displayDollars.toFixed(2)} (${(item.dollarValue * 1000).toLocaleString()} sparks)</div>
+                                    </div>
+                                    <button class="btn remove-btn" 
+                                        onclick="pendingApprovalsManager.removeItem('${item.id}')">
+                                        Remove
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
             </div>
         `;
+    
+        // Add live spark conversion
+        const valueInput = document.getElementById('itemValue');
+        if (valueInput) {
+            valueInput.addEventListener('input', (e) => {
+                const sparkValue = document.getElementById('sparkValue');
+                const dollarValue = parseFloat(e.target.value) || 0;
+                sparkValue.textContent = (dollarValue * 1000).toLocaleString();
+            });
+        }
     }
 
-    renderNoApprovals() {
-        return `
-            <div class="no-approvals">
-                <div class="no-approvals-message">No pending approvals</div>
+    addItem() {
+        const name = document.getElementById('itemName').value;
+        const dollarValue = Number(document.getElementById('itemValue').value);
+
+        if (!name || !dollarValue) {
+            alert('Please fill in all fields');
+            return;
+        }
+
+        const items = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+        items.push({
+            id: Date.now().toString(),
+            name,
+            dollarValue,
+            addedBy: this.currentUser.userId
+        });
+
+        localStorage.setItem(this.storageKey, JSON.stringify(items));
+        this.renderApprovals();
+    }
+
+    removeItem(itemId) {
+        try {
+            const items = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+            const updatedItems = items.filter(item => item.id !== itemId);
+            localStorage.setItem(this.storageKey, JSON.stringify(updatedItems));
+            this.renderApprovals();
+            window.dashboardManager.showNotification('Item removed successfully');
+        } catch (error) {
+            console.error('Error removing item:', error);
+            window.dashboardManager.showNotification('Failed to remove item');
+        }
+    }
+
+    renderPendingRequests() {
+        const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+        
+        if (pendingApprovals.length === 0) {
+            return '<p>No pending requests</p>';
+        }
+
+        return pendingApprovals.map(request => `
+            <div class="approval-request">
+                <div class="request-details">
+                    <h4>${request.childName}</h4>
+                    <p>${request.itemName}</p>
+                    <p>${request.cost.toLocaleString()} sparks</p>
+                </div>
+                <div class="request-actions">
+                    <button class="btn approve-btn" onclick="pendingApprovalsManager.handleApproval('${request.id}', true)">
+                        Approve
+                    </button>
+                    <button class="btn deny-btn" onclick="pendingApprovalsManager.handleApproval('${request.id}', false)">
+                        Deny
+                    </button>
+                </div>
             </div>
-        `;
+        `).join('');
     }
 
-    handleApproval(approvalId, isApproved) {
-        // Remove the approval from the list
-        this.pendingApprovals = this.pendingApprovals.filter(a => a.id !== approvalId);
-        
-        // Show notification
-        const action = isApproved ? 'approved' : 'denied';
-        this.showNotification(`Request ${action} successfully`);
-        
-        // Re-render the approvals list
-        this.renderPendingApprovals();
-    }
-
-    showNotification(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-notification';
-        toast.textContent = message;
-        document.body.appendChild(toast);
-
-        setTimeout(() => toast.classList.add('visible'), 10);
-        setTimeout(() => {
-            toast.classList.remove('visible');
-            setTimeout(() => toast.remove(), 300);
-        }, 2000);
+    handleApproval(requestId, approved) {
+        try {
+            // Get current pending approvals
+            const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+            const request = pendingApprovals.find(req => req.id === requestId);
+            
+            if (!request) {
+                console.error('Request not found:', requestId);
+                return;
+            }
+    
+            // Remove from pending approvals
+            const updatedApprovals = pendingApprovals.filter(req => req.id !== requestId);
+            localStorage.setItem('pendingApprovals', JSON.stringify(updatedApprovals));
+    
+            if (approved) {
+                // Handle approval
+                
+                // Add to spark transactions
+                const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
+                sparkTransactions.push({
+                    id: Date.now().toString(),
+                    childId: request.childId,
+                    amount: -request.cost,
+                    type: 'purchase',
+                    itemId: request.itemId,
+                    itemName: request.itemName || 'Unknown Item',
+                    cost: request.cost || 0,
+                    dollarValue: request.dollarValue || 0,
+                    timestamp: new Date().toISOString(),
+                    approvedDate: new Date().toISOString(),
+                    approvedBy: this.currentUser.userId
+                });
+                localStorage.setItem('sparkTransactions', JSON.stringify(sparkTransactions));
+    
+                // Remove from available items
+                const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+                const updatedItems = marketplaceItems.filter(item => item.id !== request.itemId);
+                localStorage.setItem(this.storageKey, JSON.stringify(updatedItems));
+    
+                // Add to purchased items history
+                const purchasedItems = JSON.parse(localStorage.getItem('purchasedItems') || '[]');
+                purchasedItems.push({
+                    ...request,
+                    purchaseDate: new Date().toISOString(),
+                    status: 'approved'
+                });
+                localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
+    
+                // Clean up any spark holds
+                const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
+                const updatedHolds = sparkHolds.filter(hold => hold.id !== request.id);
+                localStorage.setItem('sparkHolds', JSON.stringify(updatedHolds));
+            } else {
+                // Handle denial
+                
+                // Return item to available items if it was removed
+                const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+                if (!marketplaceItems.some(item => item.id === request.itemId)) {
+                    const itemToReturn = {
+                        id: request.itemId,
+                        name: request.itemName,
+                        dollarValue: request.dollarValue,
+                        addedBy: this.currentUser.userId
+                    };
+                    marketplaceItems.push(itemToReturn);
+                    localStorage.setItem(this.storageKey, JSON.stringify(marketplaceItems));
+                }
+    
+                // Add to denied history
+                const deniedItems = JSON.parse(localStorage.getItem('deniedItems') || '[]');
+                deniedItems.push({
+                    ...request,
+                    deniedDate: new Date().toISOString(),
+                    status: 'denied'
+                });
+                localStorage.setItem('deniedItems', JSON.stringify(deniedItems));
+    
+                // Clean up any spark holds
+                const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
+                const updatedHolds = sparkHolds.filter(hold => hold.id !== request.id);
+                localStorage.setItem('sparkHolds', JSON.stringify(updatedHolds));
+            }
+    
+            // Re-render approvals screen
+            this.renderApprovals();
+    
+            // Show notification
+            window.dashboardManager.showNotification(
+                `Request ${approved ? 'approved' : 'denied'} successfully!`
+            );
+    
+            // Log the action
+            console.log('Approval action completed:', {
+                requestId,
+                approved,
+                request,
+                timestamp: new Date().toISOString()
+            });
+    
+        } catch (error) {
+            console.error('Error handling approval:', error);
+            window.dashboardManager.showNotification('Error processing approval. Please try again.');
+        }
     }
 }
 
-// Initialize manager
+// Initialize approvals manager
 const pendingApprovalsManager = new PendingApprovalsManager();
 window.pendingApprovalsManager = pendingApprovalsManager;

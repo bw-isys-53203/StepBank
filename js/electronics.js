@@ -5,6 +5,9 @@ class ElectronicsManager {
         this.timeAvailable = 0; // in minutes
         this.countdownInterval = null;
         this.state = 'idle'; // idle, rampUp, active, rampDown
+        this.sessionStartTime = null; // Track when active session starts
+        this.timeUsed = 0; // Track time used in current session (minutes)
+        this.hasUsedTime = false; // New flag to track if time has been used
     }
 
     initialize(user) {
@@ -15,10 +18,8 @@ class ElectronicsManager {
     }
 
     loadAvailableTime() {
-        // Use total available sparks from dashboard manager
         const totalAvailable = window.dashboardManager.calculateTotalAvailableSparks();
-        this.timeAvailable = totalAvailable; // 1:1 conversion now
-        this.timeAvailable = 1; // Temporary for testing...
+        this.timeAvailable = Math.ceil(totalAvailable / 100); // 100:1 conversion now
     }
 
     showNotification(message) {
@@ -86,7 +87,6 @@ class ElectronicsManager {
         if (!this.selectedDevice || this.timeAvailable <= 0) return;
     
         try {
-            // Turn on plug
             const plugSuccess = await this.controlPlug(this.selectedDevice, 'on');
             if (!plugSuccess) {
                 this.showNotification('Failed to turn on device. Please try again.');
@@ -97,37 +97,26 @@ class ElectronicsManager {
             const rampUpTime = 15; // 15 seconds for testing
             let timeLeft = rampUpTime;
     
-            // Clear any existing interval
             if (this.countdownInterval) {
                 clearInterval(this.countdownInterval);
             }
     
-            // Start ramp up countdown
             this.countdownInterval = setInterval(() => {
                 if (timeLeft <= 0) {
                     if (this.state === 'rampUp') {
                         // Transition to active state
                         this.state = 'active';
-                        timeLeft = this.timeAvailable * 60; // Convert minutes to seconds
+                        this.sessionStartTime = Date.now(); // Record start time
+                        timeLeft = this.timeAvailable * 60;
                         this.renderElectronics();
                     } else if (this.state === 'active' && timeLeft <= 0) {
-                        // Transition to ramp down
+                        // Time's up - start ramp down
+                        this.updateTimeUsed();
                         this.state = 'rampDown';
-                        timeLeft = 15; // 15 seconds for testing
+                        timeLeft = 15;
                         this.renderElectronics();
                     } else if (this.state === 'rampDown' && timeLeft <= 0) {
-                        // Turn off plug at end of ramp down
-                        this.controlPlug(this.selectedDevice, 'off')
-                            .then(() => {
-                                // End session
-                                clearInterval(this.countdownInterval);
-                                this.state = 'idle';
-                                this.selectedDevice = null;
-                                this.renderElectronics();
-                            })
-                            .catch(error => {
-                                console.error('Error turning off device:', error);
-                            });
+                        this.endSession();
                         return;
                     }
                 }
@@ -145,7 +134,33 @@ class ElectronicsManager {
         }
     }
 
-    // In ElectronicsManager class, update the updateCountdown method:
+    updateTimeUsed() {
+        if (this.sessionStartTime && this.state === 'active') {
+            const timeUsedMs = Date.now() - this.sessionStartTime;
+            this.timeUsed = Math.ceil(timeUsedMs / (1000 * 60)); // Convert ms to minutes and round up
+        }
+    }
+
+    async endSession() {
+        this.updateTimeUsed();
+        
+        // Update available time locally
+        this.timeAvailable = Math.max(0, this.timeAvailable - this.timeUsed);
+        this.hasUsedTime = true; // Set flag when time is used
+        
+        // Turn off device
+        await this.controlPlug(this.selectedDevice, 'off');
+        
+        // Reset session
+        clearInterval(this.countdownInterval);
+        this.state = 'idle';
+        this.selectedDevice = null;
+        this.sessionStartTime = null;
+        this.timeUsed = 0;
+        
+        this.renderElectronics();
+    }
+
     updateCountdown(seconds) {
         const countdownElement = document.getElementById('countdown');
         if (!countdownElement) return;
@@ -170,13 +185,16 @@ class ElectronicsManager {
                 break;
         }
 
-        // Preserve the countdown-display class and add the state class
         countdownElement.className = `countdown-display ${stateClass}`;
         countdownElement.textContent = display;
     }
 
     renderElectronics() {
         const container = document.getElementById('electronics');
+        const sparksValue = this.hasUsedTime ? 
+            (this.timeAvailable * 100) : 
+            window.dashboardManager.calculateTotalAvailableSparks();
+
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
@@ -188,7 +206,7 @@ class ElectronicsManager {
 
             <div class="conversion-display">
                 <div class="currency-circle">
-                    <div class="value">${window.dashboardManager.calculateTotalAvailableSparks()}</div>
+                    <div class="value">${sparksValue}</div>
                     <div class="label">SPARKS</div>
                 </div>
                 <div class="equals-sign">=</div>
@@ -203,10 +221,8 @@ class ElectronicsManager {
     }
 
     renderDeviceSelection() {
-        // Get all configured devices
         const configs = window.deviceConfigManager.getAllConfigs();
         
-        // Filter only enabled devices
         const enabledDevices = Object.entries(configs)
             .filter(([_, config]) => config.enabled)
             .map(([id, config]) => ({
@@ -256,38 +272,40 @@ class ElectronicsManager {
             </div>
         `;
     }
-        // Add this new method
+
     async stopSession() {
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
         }
     
-        // Start ramp down process
+        this.updateTimeUsed();
+        
         this.state = 'rampDown';
-        const rampDownTime = 15; // 15 seconds for testing
+        const rampDownTime = 15;
         let timeLeft = rampDownTime;
     
-        const rampDownInterval = setInterval(async () => {
+        const rampDownInterval = setInterval(() => {
             if (timeLeft <= 0) {
                 clearInterval(rampDownInterval);
-                // Turn off plug at end of ramp down
-                await this.controlPlug(this.selectedDevice, 'off');
-                this.state = 'idle';
-                this.selectedDevice = null;
-                this.renderElectronics();
+                this.endSession();
             }
             this.updateCountdown(timeLeft);
             timeLeft--;
         }, 1000);
     }
 
-    // Add cleanup method
     cleanup() {
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
         }
+        if (this.state === 'active') {
+            this.updateTimeUsed();
+            this.endSession();
+        }
         this.state = 'idle';
         this.selectedDevice = null;
+        this.sessionStartTime = null;
+        this.timeUsed = 0;
     }
 }
 
