@@ -3,10 +3,7 @@ class MarketplaceManager {
     constructor() {
         this.currentUser = null;
         this.products = [];
-        this.currentPage = 1;
-        this.itemsPerPage = 8;
-        this.currentCategory = 'all';
-        this.searchQuery = '';
+        this.storageKey = 'marketplaceItems';
     }
 
     initialize(user) {
@@ -18,192 +15,129 @@ class MarketplaceManager {
 
     setupEventListeners() {
         document.addEventListener('click', (e) => {
-            if (e.target.matches('.category-btn')) {
-                this.handleCategoryFilter(e.target.dataset.category);
-            }
-            
             if (e.target.matches('.purchase-btn')) {
                 this.showPurchaseModal(e.target.dataset.productId);
             }
-            
-            if (e.target.matches('.page-btn')) {
-                this.handlePageChange(parseInt(e.target.dataset.page));
-            }
-        });
-
-        // Search input debouncing
-        let searchTimeout;
-        document.querySelector('.search-input')?.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.handleSearch(e.target.value);
-            }, 300);
         });
     }
 
     loadProducts() {
-        // In a real app, this would fetch from an API
-        this.products = [
-            {
-                id: 'switch_1',
-                name: 'Nintendo Switch',
-                category: 'Electronics',
-                description: 'Latest Nintendo Switch gaming console',
-                points: 200000,
-                image: '/api/placeholder/400/320'
-            },
-            {
-                id: 'lego_1',
-                name: 'LEGO Star Wars Set',
-                category: 'Toys',
-                description: 'Build your own Star Wars universe',
-                points: 50000,
-                image: '/api/placeholder/400/320'
-            },
-            {
-                id: 'game_1',
-                name: 'Minecraft',
-                category: 'Games',
-                description: 'Digital download code for Minecraft',
-                points: 25000,
-                image: '/api/placeholder/400/320'
-            },
-            // Add more products as needed
-        ];
+        // Load from localStorage
+        this.products = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
     }
 
     renderMarketplace() {
         const container = document.getElementById('marketplace');
-        const filteredProducts = this.getFilteredProducts();
-        const paginatedProducts = this.paginateProducts(filteredProducts);
-
+        const availableSparks = window.dashboardManager.calculateTotalAvailableSparks();
+        const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+        const pendingItem = pendingApprovals.find(approval => 
+            approval.childId === this.currentUser.userId && 
+            approval.status === 'pending'
+        );
+    
+        // Calculate remaining balance after pending item
+        const remainingSparks = pendingItem ? availableSparks - pendingItem.cost : availableSparks;
+        const remainingDollars = remainingSparks / 1000;
+        
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
-                    <span>Marketplace</span>
+                    <div class="logo-icon"></div>
+                    <span>Buy Stuff</span>
                 </div>
                 <button class="btn" onclick="showSection('dashboard')">Back</button>
             </nav>
-
-            <div class="search-container">
-                <div class="search-bar">
-                    <input type="text" 
-                        class="search-input" 
-                        placeholder="Search products..."
-                        value="${this.searchQuery}">
+    
+            <div class="sparks-conversion">
+                <div class="conversion-circle">
+                    <div class="amount">${remainingSparks.toLocaleString()}</div>
+                    <div class="label">SPARKS</div>
                 </div>
-                
-                <div class="category-filters">
-                    ${this.renderCategoryButtons()}
+                <div class="equals">=</div>
+                <div class="conversion-circle">
+                    <div class="amount">$${Math.ceil(remainingDollars * 100) / 100}</div>
+                    <div class="label">DOLLARS</div>
                 </div>
             </div>
-
+    
             <div class="products-grid">
-                ${paginatedProducts.map(product => this.createProductCard(product)).join('')}
+                ${this.products.map(product => {
+                    const sparkCost = product.dollarValue * 1000;
+                    const canAfford = remainingSparks >= sparkCost;
+                    const isPending = this.isPendingApproval(product.id);
+                    
+                    return `
+                        <div class="product-card">
+                            <div class="product-image">
+                                <img src="/api/placeholder/400/320" alt="${product.name}">
+                            </div>
+                            <div class="product-details">
+                                <h3 class="product-name">${product.name}</h3>
+                                <div class="product-cost">
+                                    <div class="cost-row">
+                                        <span>${sparkCost.toLocaleString()} sparks</span>
+                                        <span>$${Math.ceil(product.dollarValue * 100) / 100}</span>
+                                    </div>
+                                </div>
+                                ${isPending ? 
+                                    '<div class="pending-status">Pending Approval</div>' :
+                                    `<button class="btn purchase-btn" 
+                                        data-product-id="${product.id}"
+                                        ${!canAfford ? 'disabled' : ''}>
+                                        ${canAfford ? 'Request Purchase' : 'Not Enough Sparks'}
+                                    </button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
-
-            ${this.renderPagination(filteredProducts.length)}
+    
+            ${this.renderPurchaseHistory()}
         `;
+    
+        // Add event listeners for purchase buttons
+        const purchaseButtons = container.querySelectorAll('.purchase-btn');
+        purchaseButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const productId = e.target.dataset.productId;
+                this.showPurchaseModal(productId);
+            });
+        });
     }
 
-    renderCategoryButtons() {
-        const categories = ['All', 'Toys', 'Electronics', 'Games'];
-        return categories.map(category => `
-            <button class="category-btn ${this.currentCategory === category.toLowerCase() ? 'active' : ''}"
-                    data-category="${category.toLowerCase()}">
-                ${category}
-            </button>
-        `).join('');
-    }
-
-    createProductCard(product) {
-        const canAfford = this.getAvailablePoints() >= product.points;
+    createProductCard(product, availableSparks) {
+        const sparkCost = product.dollarValue * 1000;
+        const canAfford = availableSparks >= sparkCost;
+        const isPending = this.isPendingApproval(product.id);
+        
+        // Round up to nearest cent for display
+        const displayDollars = Math.ceil(product.dollarValue * 100) / 100;
         
         return `
             <div class="product-card">
                 <div class="product-image">
-                    <img src="${product.image}" alt="${product.name}">
+                    <img src="/api/placeholder/400/320" alt="${product.name}">
                 </div>
                 <div class="product-details">
-                    <div class="product-category">${product.category}</div>
                     <h3 class="product-name">${product.name}</h3>
-                    <p class="product-description">${product.description}</p>
-                    <div class="product-points">${product.points.toLocaleString()} points</div>
-                    <button class="btn purchase-btn" 
-                        data-product-id="${product.id}"
-                        ${!canAfford ? 'disabled' : ''}>
-                        ${canAfford ? 'Purchase' : 'Not Enough Points'}
-                    </button>
+                    <div class="product-cost">
+                        <div class="cost-row">
+                            <span>${sparkCost.toLocaleString()} sparks</span>
+                            <span>$${displayDollars.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    ${isPending ? 
+                        '<div class="pending-status">Pending Approval</div>' :
+                        `<button class="btn purchase-btn" 
+                            data-product-id="${product.id}"
+                            ${!canAfford ? 'disabled' : ''}>
+                            ${canAfford ? 'Request Purchase' : 'Not Enough Sparks'}
+                        </button>`
+                    }
                 </div>
             </div>
         `;
-    }
-
-    renderPagination(totalItems) {
-        const totalPages = Math.ceil(totalItems / this.itemsPerPage);
-        if (totalPages <= 1) return '';
-
-        let pages = [];
-        for (let i = 1; i <= totalPages; i++) {
-            pages.push(`
-                <button class="page-btn ${this.currentPage === i ? 'active' : ''}"
-                        data-page="${i}">
-                    ${i}
-                </button>
-            `);
-        }
-
-        return `
-            <div class="pagination">
-                <button class="page-btn" 
-                    data-page="${this.currentPage - 1}"
-                    ${this.currentPage === 1 ? 'disabled' : ''}>
-                    Previous
-                </button>
-                ${pages.join('')}
-                <button class="page-btn" 
-                    data-page="${this.currentPage + 1}"
-                    ${this.currentPage === totalPages ? 'disabled' : ''}>
-                    Next
-                </button>
-            </div>
-        `;
-    }
-
-    getFilteredProducts() {
-        return this.products.filter(product => {
-            const matchesCategory = this.currentCategory === 'all' || 
-                product.category.toLowerCase() === this.currentCategory;
-            
-            const matchesSearch = !this.searchQuery || 
-                product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                product.description.toLowerCase().includes(this.searchQuery.toLowerCase());
-
-            return matchesCategory && matchesSearch;
-        });
-    }
-
-    paginateProducts(products) {
-        const start = (this.currentPage - 1) * this.itemsPerPage;
-        const end = start + this.itemsPerPage;
-        return products.slice(start, end);
-    }
-
-    handleCategoryFilter(category) {
-        this.currentCategory = category;
-        this.currentPage = 1;
-        this.renderMarketplace();
-    }
-
-    handleSearch(query) {
-        this.searchQuery = query;
-        this.currentPage = 1;
-        this.renderMarketplace();
-    }
-
-    handlePageChange(page) {
-        this.currentPage = page;
-        this.renderMarketplace();
     }
 
     showPurchaseModal(productId) {
@@ -213,31 +147,35 @@ class MarketplaceManager {
         const modal = document.createElement('div');
         modal.className = 'purchase-modal';
         modal.innerHTML = `
-            <h2 class="modal-title">Confirm Purchase</h2>
-            <div class="modal-product-info">
-                <div class="modal-product-image">
-                    <img src="${product.image}" alt="${product.name}">
+            <h2>Confirm Purchase</h2>
+            <div class="modal-content">
+                <p>Request purchase of ${product.name}?</p>
+                <p>Cost: ${(product.dollarValue * 1000).toLocaleString()} sparks</p>
+                <div class="modal-actions">
+                    <button class="btn confirm-btn">
+                        Confirm
+                    </button>
+                    <button class="btn cancel-btn">
+                        Cancel
+                    </button>
                 </div>
-                <div class="modal-product-details">
-                    <h3>${product.name}</h3>
-                    <p>${product.points.toLocaleString()} points</p>
-                </div>
-            </div>
-            <div class="confirmation-message">
-                This purchase will be sent to your parent for approval.
-            </div>
-            <div class="modal-actions">
-                <button class="btn" onclick="marketplaceManager.handlePurchase('${productId}')">
-                    Confirm Purchase
-                </button>
-                <button class="btn" onclick="marketplaceManager.closePurchaseModal()">
-                    Cancel
-                </button>
             </div>
         `;
 
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
+        
+        // Add proper event listeners
+        const confirmBtn = modal.querySelector('.confirm-btn');
+        const cancelBtn = modal.querySelector('.cancel-btn');
+        
+        confirmBtn.addEventListener('click', () => {
+            this.requestPurchase(productId);
+        });
+        
+        cancelBtn.addEventListener('click', () => {
+            this.closePurchaseModal();
+        });
         
         document.body.appendChild(overlay);
         document.body.appendChild(modal);
@@ -248,6 +186,15 @@ class MarketplaceManager {
         }, 10);
     }
 
+    isPendingApproval(productId) {
+        const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+        return pendingApprovals.some(approval => 
+            approval.itemId === productId && 
+            approval.childId === this.currentUser.userId &&
+            approval.status === 'pending'
+        );
+    }
+
     closePurchaseModal() {
         const modal = document.querySelector('.purchase-modal');
         const overlay = document.querySelector('.modal-overlay');
@@ -255,7 +202,6 @@ class MarketplaceManager {
         if (modal && overlay) {
             modal.classList.remove('visible');
             overlay.classList.remove('visible');
-            
             setTimeout(() => {
                 modal.remove();
                 overlay.remove();
@@ -263,53 +209,182 @@ class MarketplaceManager {
         }
     }
 
-    async handlePurchase(productId) {
-        const product = this.products.find(p => p.id === productId);
-        if (!product) return;
-
-        if (this.currentUser.isParent) {
-            await this.processPurchase(product);
-        } else {
-            await this.requestParentApproval(product);
-        }
-
-        this.closePurchaseModal();
-        this.renderMarketplace();
-    }
-
-    async processPurchase(product) {
-        // In a real app, this would make API calls
-        console.log(`Processing purchase for ${product.name}`);
-        // Update points balance
-        // Generate order confirmation
-        // etc.
-    }
-
-    async requestParentApproval(product) {
-        // In a real app, this would make API calls
-        console.log(`Requesting parent approval for ${product.name}`);
-        // Add to pending approvals
-        // Notify parent
-        // etc.
-    }
-
-    getAvailablePoints() {
-        // Fallback points if dashboard manager isn't available
-        const defaultPoints = 1000;
-        
+    requestPurchase(productId) {
         try {
-            if (window.dashboardManager) {
-                const stats = window.dashboardManager.calculateStatistics();
-                return stats.availablePoints;
+            // Find the product
+            const product = this.products.find(p => p.id === productId);
+            if (!product) {
+                console.error('Product not found:', productId);
+                window.dashboardManager.showNotification('Error: Product not found');
+                return;
             }
-            return defaultPoints;
+    
+            // Calculate costs
+            const sparkCost = product.dollarValue * 1000;
+            const availableSparks = window.dashboardManager.calculateTotalAvailableSparks();
+    
+            // Validate sufficient sparks
+            if (availableSparks < sparkCost) {
+                window.dashboardManager.showNotification('Not enough sparks available');
+                this.closePurchaseModal();
+                return;
+            }
+    
+            // Check if already pending
+            const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+            const isAlreadyPending = pendingApprovals.some(
+                approval => approval.itemId === productId && 
+                           approval.childId === this.currentUser.userId &&
+                           approval.status === 'pending'
+            );
+    
+            if (isAlreadyPending) {
+                window.dashboardManager.showNotification('This item is already pending approval');
+                this.closePurchaseModal();
+                return;
+            }
+    
+            // Create new request
+            const newRequest = {
+                id: Date.now().toString(),
+                childId: this.currentUser.userId,
+                childName: this.currentUser.username,
+                itemId: product.id,
+                itemName: product.name,
+                cost: sparkCost,
+                dollarValue: Math.ceil(product.dollarValue * 100) / 100,
+                type: 'Marketplace Purchase',
+                timestamp: new Date().toISOString(),
+                status: 'pending',
+                originalProduct: {
+                    ...product,
+                    requestDate: new Date().toISOString()
+                }
+            };
+    
+            // First, ensure modal is removed from DOM
+            const modal = document.querySelector('.purchase-modal');
+            const overlay = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+            if (overlay) {
+                overlay.remove();
+            }
+    
+            // Add to pending approvals
+            pendingApprovals.push(newRequest);
+            localStorage.setItem('pendingApprovals', JSON.stringify(pendingApprovals));
+    
+            // Create a temporary hold on sparks
+            const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
+            sparkHolds.push({
+                id: newRequest.id,
+                childId: this.currentUser.userId,
+                amount: sparkCost,
+                timestamp: new Date().toISOString(),
+                type: 'purchase_hold'
+            });
+            localStorage.setItem('sparkHolds', JSON.stringify(sparkHolds));
+    
+            // Show notification
+            window.dashboardManager.showNotification('Purchase request sent to parent');
+    
+            // Log the transaction attempt
+            console.log('Purchase request created:', {
+                request: newRequest,
+                availableSparks,
+                remainingSparks: availableSparks - sparkCost
+            });
+    
+            // Re-render the marketplace to show updated status
+            this.renderMarketplace();
+    
         } catch (error) {
-            console.warn('Error getting points:', error);
-            return defaultPoints;
+            console.error('Error processing purchase request:', error);
+            window.dashboardManager.showNotification('Error processing request. Please try again.');
+            // Ensure modal is closed even on error
+            const modal = document.querySelector('.purchase-modal');
+            const overlay = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+            if (overlay) {
+                overlay.remove();
+            }
         }
+    }
+    
+    getSelectedPendingItem() {
+        const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
+        return pendingApprovals.find(approval => 
+            approval.childId === this.currentUser.userId && 
+            approval.status === 'pending'
+        );
+    }
+
+    renderPurchaseHistory() {
+        try {
+            const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
+            const approvedPurchases = sparkTransactions
+                .filter(transaction => {
+                    return transaction && 
+                        transaction.type === 'purchase' && 
+                        transaction.childId === this.currentUser.userId &&
+                        transaction.dollarValue !== undefined;  // Add null check for dollarValue
+                })
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+            if (approvedPurchases.length === 0) {
+                return '';
+            }
+    
+            return `
+                <div class="purchase-history">
+                    <h3>Purchase History</h3>
+                    <div class="history-items">
+                        ${approvedPurchases.map(purchase => {
+                            // Add null checks and default values
+                            const dollarValue = purchase.dollarValue || 0;
+                            const cost = purchase.cost || 0;
+                            const itemName = purchase.itemName || 'Unknown Item';
+                            const timestamp = purchase.timestamp ? new Date(purchase.timestamp).toLocaleDateString() : 'Unknown Date';
+    
+                            return `
+                                <div class="history-item">
+                                    <div class="item-details">
+                                        <span class="item-name">${itemName}</span>
+                                        <span class="item-cost">
+                                            $${dollarValue.toFixed(2)} 
+                                            (${cost.toLocaleString()} sparks)
+                                        </span>
+                                    </div>
+                                    <div class="purchase-date">
+                                        ${timestamp}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error rendering purchase history:', error);
+            return ''; // Return empty string on error
+        }
+    }
+
+    getApprovedPurchases() {
+        const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
+        return sparkTransactions
+            .filter(transaction => 
+                transaction.type === 'purchase' && 
+                transaction.childId === this.currentUser.userId
+            )
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     }
 }
 
 // Initialize marketplace manager
 const marketplaceManager = new MarketplaceManager();
-window.marketplaceManager = marketplaceManager; // Make it globally accessible
+window.marketplaceManager = marketplaceManager;

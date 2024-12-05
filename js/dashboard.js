@@ -944,12 +944,12 @@ class DashboardManager {
             }, 0);
     
             const screenTimeData = this.screenTimeUsage[this.currentUser.userId];
+
             // Return total points if no screen time usage exists
             if (!screenTimeData) {
                 console.log('No screen time data found');
                 return totalEarnedPoints;
             }
-    
             // Calculate total points used for screen time
             const totalUsedPoints = screenTimeData.reduce((sum, day) => {
                 return sum + (day.minutes * 100);
