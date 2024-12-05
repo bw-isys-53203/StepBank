@@ -46,14 +46,14 @@ class SparkCalculator {
         console.log('Coefficients:', { stepsCoef, timeCoef, heartRateCoef });
     
         // Calculate big number value
-        const bigNumberValue = (steps * stepsCoef) * 
-                             (timeMinutes * timeCoef) * 
-                             (avgHeartRate * heartRateCoef);
+        const bigNumberValue = ((steps * stepsCoef) +
+                             (timeMinutes * timeCoef) +
+                             (avgHeartRate * heartRateCoef))
     
         console.log('Big Number:', bigNumberValue);
     
         // Calculate spark points
-        const sparkPoints = Math.floor(bigNumberValue / this.config.sparkCoefficient);
+        const sparkPoints = Math.floor(bigNumberValue);
     
         console.log('Final Spark Points:', sparkPoints);
     

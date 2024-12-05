@@ -185,10 +185,10 @@
             const hrResult = heartRate * heartRateCoef;
 
             // Calculate big number
-            const bigNumber = stepsResult * timeResult * hrResult;
+            const bigNumber = stepsResult + timeResult + hrResult;
 
             // Calculate final sparks
-            const sparkPoints = Math.floor(bigNumber / config.sparkCoefficient);
+            const sparkPoints = Math.floor(bigNumber);//Math.floor(bigNumber / config.sparkCoefficient);
 
             // Update display
             document.getElementById('stepsValue').textContent = steps.toLocaleString();
