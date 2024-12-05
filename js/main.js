@@ -2,18 +2,38 @@
 // Global navigation function
 // In main.js
 function showSection(sectionId) {
-    const sections = ['authSection', 'dashboard', 'rewards', 'marketplace', 
-        'electronics', 'pendingApprovals', 'children', 'device', 'fitbit'];
-    
+    const sections = [
+	    'authSection',
+	    'dashboard',
+	    'rewards',
+	    'marketplace',
+	    'electronics',
+	    'pendingApprovals',
+	    'children',
+	    'settings',
+	    'family',
+	    'messages',
+      'device', 
+      'fitbit'
+    ];
+
     // Cleanup any active timers/state when switching sections
     if (window.electronicsManager && sectionId !== 'electronics') {
         window.electronicsManager.cleanup();
     }
 
     sections.forEach(section => {
-        document.getElementById(section).classList.add('hidden');
+        const element = document.getElementById(section);
+        if (element) {  // Add this check to avoid null errors
+            element.classList.add('hidden');
+        }
     });
-    document.getElementById(sectionId).classList.remove('hidden');
+
+    // Show requested section
+    const sectionElement = document.getElementById(sectionId);
+    if (sectionElement) {  // Add this check
+        sectionElement.classList.remove('hidden');
+    }
 
     // Initialize relevant manager based on section
     switch (sectionId) {
@@ -40,7 +60,10 @@ function showSection(sectionId) {
             break;
         case 'fitbit':
             window.fitbitManager.initialize(window.authManager.currentUser);
-            break;  
+            break;     
+        case 'settings':
+            window.dashboardManager.renderSettings();
+            break;
     }
 }
 

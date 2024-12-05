@@ -1,0 +1,81 @@
+from kasa.iot import IotPlug
+import asyncio
+import sys
+import argparse
+
+# Device configurations
+PS5_PLUG = "192.168.1.144"  # Update this if needed
+XBOX_PLUG = None  # Add your Xbox plug IP when you have it
+
+async def get_plug_state(ip: str) -> bool:
+    """Get the current state of a plug."""
+    try:
+        device = IotPlug(ip)
+        await device.update()
+        return device.is_on
+    except Exception as e:
+        print(f"Error getting plug state: {str(e)}")
+        return False
+
+async def turn_on_plug(ip: str) -> bool:
+    """Turn on a plug."""
+    try:
+        device = IotPlug(ip)
+        await device.update()
+        if not device.is_on:
+            await device.turn_on()
+        return True
+    except Exception as e:
+        print(f"Error turning on plug: {str(e)}")
+        return False
+
+async def turn_off_plug(ip: str) -> bool:
+    """Turn off a plug."""
+    try:
+        device = IotPlug(ip)
+        await device.update()
+        if device.is_on:
+            await device.turn_off()
+        return True
+    except Exception as e:
+        print(f"Error turning off plug: {str(e)}")
+        return False
+
+async def control_device(device: str, action: str) -> None:
+    """Control a specific device."""
+    if device.lower() == "ps5":
+        ip = PS4_PLUG
+        name = "PS5"
+    elif device.lower() == "xbox":
+        if not XBOX_PLUG:
+            print("Xbox plug IP not configured")
+            return
+        ip = XBOX_PLUG
+        name = "Xbox"
+    else:
+        print(f"Unknown device: {device}")
+        return
+
+    if action.lower() == "on":
+        success = await turn_on_plug(ip)
+        print(f"{name} turned ON successfully" if success else f"Failed to turn {name} ON")
+    elif action.lower() == "off":
+        success = await turn_off_plug(ip)
+        print(f"{name} turned OFF successfully" if success else f"Failed to turn {name} OFF")
+    elif action.lower() == "status":
+        state = await get_plug_state(ip)
+        print(f"{name} is currently {'ON' if state else 'OFF'}")
+    else:
+        print(f"Unknown action: {action}")
+
+def main():
+    parser = argparse.ArgumentParser(description='Control PS4 and Xbox power plugs')
+    parser.add_argument('device', choices=['ps5', 'xbox'], help='Device to control (ps5 or xbox)', type=str.lower)
+    parser.add_argument('action', choices=['on', 'off', 'status'], help='Action to perform (on, off, or status)', type=str.lower)
+    
+    args = parser.parse_args()
+    
+    asyncio.run(control_device(args.device, args.action))
+
+if __name__ == "__main__":
+    main()
