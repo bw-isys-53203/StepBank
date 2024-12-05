@@ -290,7 +290,7 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        async saveActivityForDay(userId, date, activityData) {
+        /*async saveActivityForDay(userId, date, activityData) {
             try {
                 console.log("In saveActivityForDay");
                 
@@ -298,7 +298,8 @@ const dbReadyPromise = new Promise((resolve) => {
                 const activity = {
                     steps: activityData.steps || 0,
                     activeMinutes: activityData.activeMinutes || 0,
-                    averageHeartRate: activityData.averageHeartRate || 0
+                    averageHeartRate: activityData.averageHeartRate || 0,
+                    points: activityData.points || 0
                 };
         
                 // Save to specific date path
@@ -310,9 +311,68 @@ const dbReadyPromise = new Promise((resolve) => {
                 console.error('Error saving activity data:', error);
                 throw error;
             }
-        }
+        }*/
 
-        async getActivityDataForPastDays(userId, days = 10) {
+            async saveActivityForDay(userId, date, activityData) {
+                try {
+                    console.log("In saveActivityForDay");
+                    
+                    // First get all existing activities
+                    const activitiesRef = this.database.ref(`users/${userId}/activities`);
+                    const snapshot = await activitiesRef.once('value');
+                    const activities = snapshot.val() || {};
+                    
+                    // Check if current date already exists
+                    if (activities[date]) {
+                        // Just update the existing record
+                        const activity = {
+                            steps: activityData.steps || 0,
+                            activeMinutes: activityData.activeMinutes || 0,
+                            averageHeartRate: activityData.averageHeartRate || 0,
+                            points: activityData.points || 0
+                        };
+                        
+                        await activitiesRef.child(date).update(activity);
+                        console.log(`Activity data updated for ${date}`);
+                        return true;
+                    }
+                    
+                    // If it's a new day's data
+                    // Convert to array of [date, data] pairs and sort by date
+                    const sortedActivities = Object.entries(activities)
+                        .sort((a, b) => new Date(b[0]) - new Date(a[0]));
+                    
+                    // Create the new activity object
+                    const activity = {
+                        steps: activityData.steps || 0,
+                        activeMinutes: activityData.activeMinutes || 0,
+                        averageHeartRate: activityData.averageHeartRate || 0,
+                        points: activityData.points || 0
+                    };
+            
+                    // If we already have 7 or more records
+                    if (sortedActivities.length >= 7) {
+                        // Get dates to remove (oldest dates beyond 7 days)
+                        const datesToRemove = sortedActivities.slice(6).map(([date]) => date);
+                        
+                        // Remove old records
+                        for (const oldDate of datesToRemove) {
+                            await activitiesRef.child(oldDate).remove();
+                        }
+                    }
+            
+                    // Add new record
+                    await activitiesRef.child(date).set(activity);
+                    console.log(`New activity data saved for ${date}`);
+                    return true;
+            
+                } catch (error) {
+                    console.error('Error saving activity data:', error);
+                    throw error;
+                }
+            }
+
+        async getActivityDataForPastDays(userId, days = 7) {
             try {
                 // Calculate dates
                 const endDate = new Date();
@@ -334,7 +394,8 @@ const dbReadyPromise = new Promise((resolve) => {
                             steps: activity.steps || 0,
                             duration: activity.activeMinutes || 0,
                             avgHeartRate: activity.averageHeartRate || 0,
-                            timestamp: activity.timestamp
+                            points: activity.points || 0,
+                            day: date
                         });
                     });
         

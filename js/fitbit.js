@@ -13,7 +13,6 @@ class FitbitManager {
     }
 
     async initialize(user) {
-        console.log("In initialize user:: ", user)
         this.currentUser = user;
         this.userId = user.userId
         this.deviceConfig = await db.getDeviceConfig(this.userId);
@@ -250,12 +249,9 @@ class FitbitManager {
 
         async isFitbitTokenExpired(userId) {
             try {
-                console.log("isFitbitTokenExpired");
                 const deviceConfig = await db.getDeviceConfig(userId);
-                console.log("deviceConfig:: ", deviceConfig);
                 
                 if (!deviceConfig || !deviceConfig.lastUpdated || !deviceConfig.expiresIn) {
-                    console.log("isFitbitTokenExpired expired");
                     return true;
                 }
         
@@ -313,7 +309,6 @@ class FitbitManager {
         
         async getFitbitAccessToken(userId) {
             try {
-                console.log("getFitbitAccessToken");
                 const deviceConfig = await db.getDeviceConfig(userId);
                 
                 if (!deviceConfig) {
@@ -324,13 +319,9 @@ class FitbitManager {
                 const isExpired = await this.isFitbitTokenExpired(userId);
         
                 if (!isExpired) {
-                    console.log("Device Config not expired");
-                    console.log("getFitbitAccessToken deviceConig ::", deviceConfig);
-                    console.log("getFitbitAccessToken deviceConig accessToken ::", deviceConfig.accessToken);
                     return deviceConfig.accessToken;
                 }
         
-                console.log("Device Config expired");
                 // If token is expired, refresh it
                 const newAccessToken = await this.refreshFitbitToken(userId, deviceConfig.refreshToken);
                 return newAccessToken;

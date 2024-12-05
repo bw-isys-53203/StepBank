@@ -8,11 +8,7 @@ class DashboardManager {
         this.children = [];
         this.selectedChildId = null;
         this.sparkCalculator = null;
-        this.currentActivityData = {
-            steps: 0,
-            minutes: 0,
-            heartRate: 0
-        };
+        this.currentActivityData = {};
         this.currentMetric = 'steps';
         this.switchMetric = this.switchMetric.bind(this);
         this.isConnected = false;
@@ -24,20 +20,35 @@ class DashboardManager {
         //this.isConnected = true;
         await this.loadConfig();
 
-        // Check if Fitbit is connected and fetch data
-        this.isConnected = await db.isFitbitDeviceConnected(this.currentUser.userId);
-        if (this.isConnected) {
-            await this.fetchFitbitData();
-        }
-        if(this.currentUser.accountType === 'child') {
+        if (this.currentUser.accountType === 'parent') {
+            const childrenSnapshot = await db.getParentChildren(this.currentUser.userId);
+            
+            if (childrenSnapshot) {
+                this.screenTimeUsage = {};
+                // Generate screen time usage for each registered child
+                for (const [childId, childData] of Object.entries(childrenSnapshot)) {
+                    if (childData.isRegistered) {
+                        this.isConnected = await db.isFitbitDeviceConnected(childId);
+                        if (this.isConnected) {
+                            await this.fetchFitbitData(childId);
+                        }
+                        this.storedActivityDataInDB = await db.getActivityDataForPastDays(childId);
+                        this.screenTimeUsage[childId] = await this.generateScreenTimeUsage(childId);
+                    }
+                }
+            }
+        } else if (this.currentUser.accountType === 'child') {
+            // Check if Fitbit is connected and fetch data
+            this.isConnected = await db.isFitbitDeviceConnected(this.currentUser.userId);
+            if (this.isConnected) {
+                await this.fetchFitbitData(this.currentUser.userId);
+            }
             this.storedActivityDataInDB = await db.getActivityDataForPastDays(this.currentUser.userId);
-            console.log("storedActivityDataInDB:: ", this.storedActivityDataInDB);
+            // If it's a child user, only generate their own screen time usage
+            this.screenTimeUsage = {
+                [this.currentUser.userId]: await this.generateScreenTimeUsage(this.currentUser.userId)
+            };
         }
-        // Initialize screen time usage after sparkCalculator is ready
-        this.screenTimeUsage = {
-            child1: await this.generateScreenTimeUsage('child1'),
-            child2: await this.generateScreenTimeUsage('child2')
-        };
         
         await this.loadDashboardData();
         await this.setupEventListeners();
@@ -96,7 +107,7 @@ class DashboardManager {
             
             try {
                 const dayActivities = this.getChildActivityData(childId)
-                    .filter(activity => activity.timestamp.startsWith(dateStr));
+                    .filter(activity => activity.day.startsWith(dateStr));
                 
                 console.log('Activities for day:', dateStr, dayActivities);
 
@@ -268,37 +279,38 @@ class DashboardManager {
         };
     }
 
-    getTotalSteps() {
+    getTotalSteps(userId) {
         /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.steps || 0;
         }*/
-        return this.currentActivityData.steps;
+       console.log("this.currentActivityData:: ",this.currentActivityData);
+        return this.currentActivityData[userId].steps;
     }
 
-    getActivityMinutes() {
+    getActivityMinutes(userId) {
         /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
         }*/
-        return this.currentActivityData.minutes;
+        return this.currentActivityData[userId].activeMinutes;
     }
 
-    getActivityTime() {
+    getActivityTime(userId) {
         let minutes;
         /*if (this.currentUser.accountType === 'child') {
             minutes = this.getChildActivityData(this.currentUser.id)[0]?.duration || 0;
         } else {*/
-            minutes = this.currentActivityData.minutes;
+            minutes = this.currentActivityData[userId].activeMinutes;
         //}
         const hours = Math.floor(minutes / 60);
         const remainingMinutes = minutes % 60;
         return `${hours}h ${remainingMinutes}m`;
     }
 
-    getAverageHR() {
+    getAverageHR(userId) {
         /*if (this.currentUser.accountType === 'child') {
             return this.getChildActivityData(this.currentUser.id)[0]?.avgHeartRate || 0;
         }*/
-        return this.currentActivityData.heartRate;
+        return this.currentActivityData[userId].averageHeartRate;
     }
 
     deductScreenTime(childId, minutes) {
@@ -309,10 +321,24 @@ class DashboardManager {
         this.renderDashboard();
     }
 
-    calculateCurrentDaySparks() {
-        const steps = this.getTotalSteps();
-        const activityTime = this.getActivityMinutes();
-        const avgHR = this.getAverageHR();
+    calculateDaySparks(steps, activeMinutes, averageHR) {
+        console.log("Calculate Today's Sparks");
+        if (this.sparkCalculator) {
+            const result = this.sparkCalculator.calculateSparks(
+                steps,
+                activeMinutes,
+                averageHR
+            );
+            return result.sparkPoints;
+        }
+        return 0;
+    }
+
+    calculateCurrentDaySparks(userId) {
+        console.log("Calculate Today's Sparks");
+        const steps = this.getTotalSteps(userId);
+        const activityTime = this.getActivityMinutes(userId);
+        const avgHR = this.getAverageHR(userId);
         
         if (this.sparkCalculator) {
             const result = this.sparkCalculator.calculateSparks(
@@ -342,6 +368,8 @@ class DashboardManager {
         const selectedChild = this.children.find(child => child.id === childId);
         if (selectedChild) {
             document.getElementById('stepsGoal').value = selectedChild.dailyGoal;
+            document.getElementById('activeTimeGoal').value = selectedChild.activeTimeGoal;
+            document.getElementById('heartRateGoal').value = selectedChild.heartRateGoal;
         }
         this.renderDashboard();
     }
@@ -426,39 +454,69 @@ class DashboardManager {
                     <button class="btn update-goals-btn">Update Goals</button>
                 </div>
             </div>
+            
             <div class="metrics-overview">
                 <h3>Current Activity Stats</h3>
-                <div class="metrics-grid">
-                    <div class="metric-box">
-                        <div class="metric-label">Steps</div>
-                        <div class="metric-value">${this.getChildStats(selectedChild.id).totalSteps.toLocaleString()}</div>
-                        <div class="metric-progress">${Math.min(this.getChildStats(selectedChild.id).progress, 100)}% of goal</div>
+                ${selectedChild.isRegistered ? `
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <div class="metric-label">Steps</div>
+                            <div class="metric-value">${this.currentActivityData[selectedChild.id].steps.toLocaleString()}</div>
+                            <div class="metric-progress">${Math.min(Math.round(((this.currentActivityData[selectedChild.id].steps || 0) / selectedChild.dailyGoal) * 100), 100)}% of goal</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Active Time</div>
+                            <div class="metric-value">${this.formatActiveTime(this.currentActivityData[selectedChild.id].activeMinutes || 0)}</div>
+                            <div class="metric-progress">${Math.min(Math.round(((this.currentActivityData[selectedChild.id].activeMinutes || 0) / selectedChild.activeTimeGoal) * 100), 100)}% of goal</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">Heart Rate</div>
+                            <div class="metric-value">${this.currentActivityData[selectedChild.id].averageHeartRate || 0} BPM</div>
+                            <div class="metric-progress">${Math.min(Math.round(((this.currentActivityData[selectedChild.id].averageHeartRate || 0) / selectedChild.heartRateGoal) * 100), 100)}% of goal</div>
+                        </div>
                     </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Active Time</div>
-                        <div class="metric-value">${this.formatActiveTime(this.getChildActivityData(selectedChild.id)[0]?.duration || 0)}</div>
-                        <div class="metric-progress">${Math.min(Math.round(((this.getChildActivityData(selectedChild.id)[0]?.duration || 0) / selectedChild.activeTimeGoal) * 100), 100)}% of goal</div>
+                ` : `
+                    <div class="not-registered-message">
+                        <div class="warning-icon">⚠️</div>
+                        <h4>${selectedChild.username} is not registered yet</h4>
+                        <p>Share the registration token with your child to complete setup.</p>
                     </div>
-                    <div class="metric-box">
-                        <div class="metric-label">Heart Rate</div>
-                        <div class="metric-value">${this.getChildActivityData(selectedChild.id)[0]?.avgHeartRate || 0} BPM</div>
-                        <div class="metric-progress">${Math.min(Math.round(((this.getChildActivityData(selectedChild.id)[0]?.avgHeartRate || 0) / selectedChild.heartRateGoal) * 100), 100)}% of goal</div>
-                    </div>
-                </div>
+                `}
             </div>
             <div class="child-card">
-                ${this.renderMetricControls()}
-                <div class="activity-chart-container">
-                    <canvas id="activityChart"></canvas>
-                </div>
+                ${selectedChild.isRegistered ? `
+                    ${this.renderMetricControls()}
+                    <div class="activity-chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                ` : `
+                    <div class="no-data-message">
+                        <div class="message-icon">📊</div>
+                        <h4>Activity Data Not Available</h4>
+                        <p>Charts will be visible once ${selectedChild.username} registers and starts tracking activities.</p>
+                        <div class="setup-steps">
+                            <p>To complete setup:</p>
+                            <ol>
+                                <li>Share the registration token with your child</li>
+                                <li>Have them create an account using the token</li>
+                                <li>Help them connect their fitness device</li>
+                            </ol>
+                        </div>
+                    </div>
+                `}
             </div>
         `;
 
-        this.updateChart(selectedChild.id);
+        //this.updateChart(selectedChild.id);
+        if (selectedChild && selectedChild.isRegistered) {
+            this.updateChart(selectedChild.id);
+        } else {
+            console.log(`Child ${selectedChild?.username} is not registered. Skipping chart update.`);
+        }
     }
 
     renderChildDashboard(container) {
-        console.log("Rendering Child Dashboard");
+        console.log("Rendering Child Dashboard:: ", this.currentUser.userId);
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
@@ -498,11 +556,11 @@ class DashboardManager {
                             stroke="#FF4B4B"
                             stroke-width="10"
                             stroke-dasharray="${this.calculateArcLength()}"
-                            stroke-dashoffset="${this.calculateProgress()}"
+                            stroke-dashoffset="${this.calculateProgress(this.currentUser.userId)}"
                             transform="rotate(210 50 50)"
                         />
                         <text x="50" y="45" class="spark-count" text-anchor="middle">
-                            ${this.calculateCurrentDaySparks()}
+                            ${this.calculateCurrentDaySparks(this.currentUser.userId)}
                         </text>
                         <text x="50" y="60" class="spark-label" text-anchor="middle">
                             TODAY'S SPARKS
@@ -513,15 +571,15 @@ class DashboardManager {
 
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-value">${this.getTotalSteps().toLocaleString()}</div>
+                    <div class="metric-value">${this.getTotalSteps(this.currentUser.userId).toLocaleString()}</div>
                     <div class="metric-label">Steps</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">${this.getActivityTime()}</div>
+                    <div class="metric-value">${this.getActivityTime(this.currentUser.userId)}</div>
                     <div class="metric-label">Active Time</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-value">${this.getAverageHR()}</div>
+                    <div class="metric-value">${this.getAverageHR(this.currentUser.userId)}</div>
                     <div class="metric-label">Avg HR</div>
                 </div>
             </div>
@@ -558,16 +616,16 @@ class DashboardManager {
         return 2 * Math.PI * 45;
     }
 
-    calculateProgress() {
-        const progress = this.getProgressPercentage();
+    calculateProgress(userId) {
+        const progress = this.getProgressPercentage(userId);
         const arcLength = this.calculateArcLength();
         const degrees = (progress / 100) * 150;
         return arcLength - (degrees / 360) * arcLength;
     }
 
-    getProgressPercentage() {
+    getProgressPercentage(userId) {
         const dailyGoal = 10000; // Default daily goal
-        const todaySteps = this.getTotalSteps();
+        const todaySteps = this.getTotalSteps(userId);
         return Math.min(Math.round((todaySteps / dailyGoal) * 100), 100);
     }
 
@@ -575,7 +633,7 @@ class DashboardManager {
         const sparkCount = document.querySelector('.spark-count');
         if (!sparkCount) return;
 
-        const finalValue = this.calculateCurrentDaySparks();
+        const finalValue = this.calculateCurrentDaySparks(this.currentUser.userId);
         const duration = 2000;
         const fps = 60;
         const frames = duration / (1000 / fps);
@@ -682,7 +740,7 @@ class DashboardManager {
         if (!child) return { totalSteps: 0, progress: 0, rewards: 0 };
 
         const activities = this.getChildActivityData(childId);
-        const todaySteps = activities[0]?.steps || Math.floor(Math.random() * 8000) + 2000;
+        const todaySteps =  [0]?.steps || Math.floor(Math.random() * 8000) + 2000;
         const progress = Math.round((todaySteps / child.dailyGoal) * 100);
 
         return {
@@ -693,13 +751,13 @@ class DashboardManager {
     }
 
     getChildActivityData(childId) {
-        if (!this.storedActivityData || !this.storedActivityData[childId]) {
+        /*if (!this.storedActivityData || !this.storedActivityData[childId]) {
             this.storedActivityData = {
                 ...this.storedActivityData,
                 [childId]: this.generateMockActivities(childId === 'child1' ? 1 : 1.5)
             };
-        }
-        return this.storedActivityData[childId];
+        }*/
+        return this.storedActivityDataInDB[childId];
     }
 /*
     calculateTotalAvailableSparks() {
@@ -729,7 +787,7 @@ class DashboardManager {
     }
 */
 
-    calculateTotalAvailableSparks() {
+    /*calculateTotalAvailableSparks() {
         if (this.currentUser.accountType === 'child') {
             const screenTimeData = this.screenTimeUsage[this.currentUser.id];
             // Sum all available minutes from the last 7 days
@@ -747,6 +805,34 @@ class DashboardManager {
             return this._cachedTotalAvailable;
         }
         return 0;
+    }*/
+
+    calculateTotalAvailableSparks() {
+        try {
+            // Check if there's stored data
+            if (!this.storedActivityDataInDB) {
+                console.log('No activity data found');
+                return 0;
+            }
+    
+            // Get current user's data array
+            const userActivities = this.storedActivityDataInDB[this.currentUser.userId];
+            if (!Array.isArray(userActivities)) {
+                console.log('No activities found for user');
+                return 0;
+            }
+    
+            // Sum up all points
+            const totalPoints = userActivities.reduce((sum, activity) => {
+                return sum + (activity.points || 0);
+            }, 0);
+    
+            return Math.round(totalPoints);
+    
+        } catch (error) {
+            console.error('Error calculating total points:', error);
+            return 0;
+        }
     }
 
     // Add method to get screen time data for specific day
@@ -918,9 +1004,9 @@ class DashboardManager {
                 labels: [],
                 values: []
             };
-            
+            console.log("prepareChartData activities:: ", activities);
             const dailyData = activities.reduce((acc, activity) => {
-                const date = new Date(activity.timestamp).toLocaleDateString();
+                const date = activity.day;//new Date(activity.timestamp).toLocaleDateString();
                 let value;
                 
                 switch(metric) {
@@ -950,7 +1036,7 @@ class DashboardManager {
                 data.labels.push(date);
                 data.values.push(dailyData[date]);
             });
-    
+            console.log("prepareChartData:: ", data);
             return data;
         }
     }
@@ -983,9 +1069,9 @@ class DashboardManager {
     }
 
     debugCurrentStats() {
-        const steps = this.getTotalSteps();
-        const activityTime = this.getActivityMinutes();
-        const avgHR = this.getAverageHR();
+        const steps = this.getTotalSteps(this.currentUser.userId);
+        const activityTime = this.getActivityMinutes(this.currentUser.userId);
+        const avgHR = this.getAverageHR(this.currentUser.userId);
         
         console.log('Current Stats:', {
             steps,
@@ -1004,14 +1090,15 @@ class DashboardManager {
             console.log('Spark Calculator not initialized!');
         }
     }
-    async fetchFitbitData() {
+    async fetchFitbitData(userId) {
         try {
-            const deviceConfig = await db.getDeviceConfig(this.currentUser.userId);
+            console.log("fetchFitbitData device config of userId:: ",userId);
+            const deviceConfig = await db.getDeviceConfig(userId);
             if (!deviceConfig?.accessToken) {
                 console.log('No Fitbit access token found');
                 return null;
             }
-            const accessToken = await window.fitbitManager.getFitbitAccessToken(this.currentUser.userId);
+            const accessToken = await window.fitbitManager.getFitbitAccessToken(userId);
             const clientId = localStorage.getItem('clientId')    
             const today = new Date().toLocaleDateString('en-CA').split('T')[0];  // Format: YYYY-MM-DD
             
@@ -1030,29 +1117,29 @@ class DashboardManager {
             }
     
             const activityData = await activityResponse.json();
+            const points = await this.calculateDaySparks(activityData.summary.steps, 
+                activityData.summary.veryActiveMinutes 
+                + activityData.summary.fairlyActiveMinutes 
+                    + activityData.summary.lightlyActiveMinutes, activityData.summary.averageHeartRate);
             console.log("ActivityData:: ", activityData);
-    
+            
             // Update dashboard with new data
-            this.currentActivityData = {
+            const activityDataJson = {
                 steps: activityData.summary.steps || 0,
-                minutes: activityData.summary.veryActiveMinutes || 0,
-                heartRate: activityData.summary.averageHeartRate || 0
+                activeMinutes: activityData.summary.veryActiveMinutes 
+                            + activityData.summary.fairlyActiveMinutes 
+                                + activityData.summary.lightlyActiveMinutes || 0,
+                averageHeartRate: activityData.summary.averageHeartRate || 0,
+                points: points || 0
             };
-    
-            // Store activity data
-            if (this.currentUser.accountType === 'child') {
-                this.storedActivityData = {
-                    [this.currentUser.userId]: [{
-                        steps: this.currentActivityData.steps,
-                        duration: this.currentActivityData.minutes,
-                        avgHeartRate: this.currentActivityData.heartRate,
-                        timestamp: new Date().toISOString()
-                    }]
-                };
-                console.log("storedActivityData:: ", this.storedActivityData);
-            }
-            await db.saveActivityForDay(this.currentUser.userId, today, this.currentActivityData);
-            return activityData;
+
+            console.log("fetchFitbitData currentActivityData:: ",this.currentActivityData);
+            this.currentActivityData = {
+                [userId]: activityDataJson
+            };
+            console.log("fetchFitbitData currentActivityData:: ",this.currentActivityData);
+            await db.saveActivityForDay(userId, today, activityDataJson);
+            //return activityData;
     
         } catch (error) {
             console.error('Error fetching Fitbit data:', error);
