@@ -484,10 +484,26 @@ class DashboardManager {
                 `}
             </div>
             <div class="child-card">
-                ${this.renderMetricControls()}
-                <div class="activity-chart-container">
-                    <canvas id="activityChart"></canvas>
-                </div>
+                ${selectedChild.isRegistered ? `
+                    ${this.renderMetricControls()}
+                    <div class="activity-chart-container">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                ` : `
+                    <div class="no-data-message">
+                        <div class="message-icon">📊</div>
+                        <h4>Activity Data Not Available</h4>
+                        <p>Charts will be visible once ${selectedChild.username} registers and starts tracking activities.</p>
+                        <div class="setup-steps">
+                            <p>To complete setup:</p>
+                            <ol>
+                                <li>Share the registration token with your child</li>
+                                <li>Have them create an account using the token</li>
+                                <li>Help them connect their fitness device</li>
+                            </ol>
+                        </div>
+                    </div>
+                `}
             </div>
             <div class="bottom-nav">
                 <button class="nav-btn" onclick="showSection('family')">
