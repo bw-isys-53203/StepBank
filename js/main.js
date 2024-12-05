@@ -1,37 +1,48 @@
-// main.js
-// Global navigation function
-// In main.js
+/**
+ * @fileoverview Main Application Controller
+ * Controls navigation between different sections of the application and initializes
+ * core managers. Handles the application's startup sequence and manages global
+ * event handlers for authentication and navigation.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Core application controller implementation
+ */
+
+/**
+ * Controls visibility of different application sections
+ * @param {string} sectionId - ID of the section to show
+ */
 function showSection(sectionId) {
     const sections = [
-	    'authSection',
-	    'dashboard',
-	    'rewards',
-	    'marketplace',
-	    'electronics',
-	    'pendingApprovals',
-	    'children',
-	    'settings',
-	    'family',
-	    'messages',
+        'authSection',
+        'dashboard',
+        'rewards',
+        'marketplace',
+        'electronics',
+        'pendingApprovals',
+        'children',
+        'settings',
+        'family',
+        'messages',
         'device', 
         'fitbit'
     ];
 
-    // Cleanup any active timers/state when switching sections
+    // Clean up any active timers/state when switching sections
     if (window.electronicsManager && sectionId !== 'electronics') {
         window.electronicsManager.cleanup();
     }
 
+    // Hide all sections
     sections.forEach(section => {
         const element = document.getElementById(section);
-        if (element) {  // Add this check to avoid null errors
+        if (element) {  // Check to avoid null errors
             element.classList.add('hidden');
         }
     });
 
     // Show requested section
     const sectionElement = document.getElementById(sectionId);
-    if (sectionElement) {  // Add this check
+    if (sectionElement) {  // Verify element exists
         sectionElement.classList.remove('hidden');
     }
 
@@ -70,14 +81,20 @@ function showSection(sectionId) {
     }
 }
 
-// Global login handler
+/**
+ * Handles user login attempt
+ * Retrieves credentials from form and passes to auth manager
+ */
 function handleLogin() {
     const username = document.getElementById('loginUsername').value;
     const password = document.getElementById('loginPassword').value;
     window.authManager.handleLogin(username, password);
 }
 
-// Global register handler
+/**
+ * Handles new user registration
+ * Collects registration data and passes to auth manager
+ */
 function handleRegister() {
     const username = document.getElementById('registerUsername').value;
     const password = document.getElementById('registerPassword').value;
@@ -85,43 +102,33 @@ function handleRegister() {
     window.authManager.handleRegister(username, password, accountType);
 }
 
-// Global logout handler
+/**
+ * Handles user logout
+ * Delegates to auth manager for cleanup and logout processing
+ */
 function handleLogout() {
     window.authManager.handleLogout();
 }
 
-// Also ensure the DOMContentLoaded handler initializes everything properly:
-/*document.addEventListener('DOMContentLoaded', () => {
-    // Initialize all managers
-    window.authManager = new AuthManager();
-    window.dashboardManager = new DashboardManager();
-    window.rewardsManager = new RewardsManager();
-    window.marketplaceManager = new MarketplaceManager();
-
-    // Check if user is already logged in
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-        window.authManager.currentUser = JSON.parse(savedUser);
-        window.dashboardManager.initialize(window.authManager.currentUser);
-        showSection('dashboard');
-    }
-});*/
-
+/**
+ * Initializes application when DOM is ready
+ * Sets up managers and checks for existing login
+ */
 document.addEventListener('DOMContentLoaded', () => {
-    // Create an async function
+    // Create an async initialization function
     const initializeApp = async () => {
         try {
             // Wait for database to be ready
             await window.dbReady;
             
-            // Initialize all managers
+            // Initialize core managers
             window.authManager = new AuthManager();
             window.dashboardManager = new DashboardManager();
             window.rewardsManager = new RewardsManager();
             window.marketplaceManager = new MarketplaceManager();
             window.messageManager = new MessageManager();
 
-            // Check if user is already logged in
+            // Check for existing login session
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 window.authManager.currentUser = JSON.parse(savedUser);
@@ -133,6 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Call the async function
+    // Start initialization
     initializeApp();
 });

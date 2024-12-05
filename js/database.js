@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Firebase Database Integration Module
+ * Provides core database functionality for the StepBank application. Handles all Firebase
+ * interactions including authentication, real-time updates, and data management for
+ * user activities, rewards, and device configurations.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Firebase integration and core database functionality
+ */
+
 // Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAv4HMH3tRjgJPQMjtrXlJLxuZd4kiLfSs",
@@ -8,18 +17,29 @@ const firebaseConfig = {
     appId: "1:807237773244:web:46165a1e8b513af6a16db9"
 };
 
-// At the start of database.js
+// Database initialization tracking
 let dbInitialized = false;
 const dbReadyPromise = new Promise((resolve) => {
+    /**
+     * Firebase Database Manager Class
+     * Handles all database operations and maintains connection state
+     */
     class FirebaseDB {
+        /**
+         * Initializes Firebase and database connection
+         * Sets up connection monitoring
+         */
         constructor() {
             firebase.initializeApp(firebaseConfig);
             this.database = firebase.database();
             this.checkConnection();
-            //dbInitialized = true;
             resolve(dbInitialized);
         }
-        // Check database connection
+
+        /**
+         * Monitors database connection state
+         * Updates dbInitialized flag based on connection status
+         */
         checkConnection() {
             this.database.ref('.info/connected').on('value', (snapshot) => {
                 if (snapshot.val() === true) {
@@ -32,7 +52,12 @@ const dbReadyPromise = new Promise((resolve) => {
             });
         }
 
-        // Create or Update data
+        /**
+         * Creates or updates data at specified path
+         * @param {string} path - Database path
+         * @param {any} data - Data to store
+         * @returns {Promise<boolean>} Success status
+         */
         async set(path, data) {
             try {
                 await this.database.ref(path).set(data);
@@ -44,7 +69,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Read data once
+        /**
+         * Retrieves data from specified path
+         * @param {string} path - Database path
+         * @returns {Promise<any>} Retrieved data
+         */
         async get(path) {
             try {
                 const snapshot = await this.database.ref(path).once('value');
@@ -55,7 +84,12 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Update specific fields
+        /**
+         * Updates specific fields at path
+         * @param {string} path - Database path
+         * @param {Object} data - Fields to update
+         * @returns {Promise<boolean>} Success status
+         */
         async update(path, data) {
             try {
                 await this.database.ref(path).update(data);
@@ -67,7 +101,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Delete data
+        /**
+         * Deletes data at specified path
+         * @param {string} path - Database path
+         * @returns {Promise<boolean>} Success status
+         */
         async delete(path) {
             try {
                 await this.database.ref(path).remove();
@@ -79,7 +117,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Listen for real-time updates
+        /**
+         * Sets up real-time value listener at path
+         * @param {string} path - Database path
+         * @param {Function} callback - Callback for value changes
+         */
         onValue(path, callback) {
             this.database.ref(path).on('value', (snapshot) => {
                 callback(snapshot.val());
@@ -88,13 +130,22 @@ const dbReadyPromise = new Promise((resolve) => {
             });
         }
 
-        // Stop listening to updates
+        /**
+         * Removes value listener at path
+         * @param {string} path - Database path to stop listening
+         */
         offValue(path) {
             this.database.ref(path).off();
             console.log('Stopped listening to:', path);
         }
 
-        // Get data with query
+        /**
+         * Queries data based on child value
+         * @param {string} path - Database path
+         * @param {string} queryKey - Key to query on
+         * @param {any} queryValue - Value to match
+         * @returns {Promise<any>} Query results
+         */
         async query(path, queryKey, queryValue) {
             try {
                 const snapshot = await this.database.ref(path)
@@ -108,16 +159,19 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // In your database.js file where you have the FirebaseDB class
-
-        // Inside FirebaseDB class
+        /**
+         * Adds a new child to parent's account
+         * @param {string} parentId - Parent's user ID
+         * @param {Object} childData - Child's information
+         * @returns {Promise<Object>} Child ID and registration token
+         */
         async addChild(parentId, childData) {
             try {
-                // Generate unique IDs
+                // Generate unique identifiers
                 const childId = 'user_' + Math.random().toString(36).substr(2, 9);
                 const registrationToken = 'token_' + Math.random().toString(36).substr(2, 9);
 
-                // Create child object with all required fields
+                // Create child object with required fields
                 const child = {
                     childName: childData.name,
                     childAge: childData.age,
@@ -132,7 +186,7 @@ const dbReadyPromise = new Promise((resolve) => {
                     lastUpdated: firebase.database.ServerValue.TIMESTAMP
                 };
 
-                // Also create a reference under parent's children
+                // Create reference under parent's children
                 await this.database.ref(`users/${parentId}/children/${childId}`).set(child);
 
                 return {
@@ -146,7 +200,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Add a method to fetch children for a parent
+        /**
+         * Retrieves all children for a parent
+         * @param {string} parentId - Parent's user ID
+         * @returns {Promise<Object>} Children data
+         */
         async getChildrenByParentId(parentId) {
             try {
                 const snapshot = await this.database.ref(`users/${parentId}/children`)
@@ -159,14 +217,18 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Find parent by child ID
+        /**
+         * Finds parent by child ID
+         * @param {string} childId - Child's user ID
+         * @returns {Promise<Object|null>} Parent data or null if not found
+         */
         async getParentByChildId(childId) {
             try {
                 // Get all users
                 const snapshot = await this.database.ref('users').once('value');
                 const users = snapshot.val();
 
-                // Loop through users to find the parent
+                // Search through users to find parent
                 for (const userId in users) {
                     const user = users[userId];
                     if (user.children && user.children[childId]) {
@@ -183,14 +245,18 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        // Find parent by registration token
+        /**
+         * Finds parent using registration token
+         * @param {string} registrationToken - Child's registration token
+         * @returns {Promise<Object|null>} Parent data or null if not found
+         */
         async getParentByToken(registrationToken) {
             try {
                 // Get all users
                 const snapshot = await this.database.ref('users').once('value');
                 const users = snapshot.val();
 
-                // Loop through users to find the parent
+                // Search through users and their children for matching token
                 for (const userId in users) {
                     const user = users[userId];
                     if (user.children) {
@@ -212,6 +278,10 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Retrieves all users
+         * @returns {Promise<Object>} All users data
+         */
         async getUsers() {
             try {
                 const snapshot = await this.database.ref('users').once('value');
@@ -222,6 +292,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Gets children data for a parent
+         * @param {string} parentId - Parent's user ID
+         * @returns {Promise<Object>} Children data
+         */
         async getParentChildren(parentId) {
             try {
                 const snapshot = await this.database.ref(`users/${parentId}/children`).once('value');
@@ -232,6 +307,12 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Retrieves specific child's data
+         * @param {string} parentId - Parent's user ID
+         * @param {string} childId - Child's ID
+         * @returns {Promise<Object>} Child's data
+         */
         async getChildData(parentId, childId) {
             try {
                 const snapshot = await this.database.ref(`users/${parentId}/children/${childId}`).once('value');
@@ -242,6 +323,13 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Updates goals for a specific child
+         * @param {string} parentId - Parent's user ID
+         * @param {string} childId - Child's ID
+         * @param {Object} goals - New goals object
+         * @returns {Promise<boolean>} Success status
+         */
         async updateChildGoals(parentId, childId, goals) {
             try {
                 await this.database.ref(`users/${parentId}/children/${childId}/goals`).update({
@@ -256,6 +344,11 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Gets device configuration for a user
+         * @param {string} userId - User ID
+         * @returns {Promise<Object>} Device configuration
+         */
         async getDeviceConfig(userId) {
             try {
                 const snapshot = await this.database.ref(`users/${userId}/deviceConfig`).once('value');
@@ -266,6 +359,12 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Saves device configuration for a user
+         * @param {string} userId - User ID
+         * @param {Object} config - Device configuration
+         * @returns {Promise<boolean>} Success status
+         */
         async saveDeviceConfig(userId, config) {
             try {
                 await this.database.ref(`users/${userId}/deviceConfig`).set(config);
@@ -276,9 +375,13 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
+        /**
+         * Checks if Fitbit device is connected for user
+         * @param {string} userId - User ID
+         * @returns {Promise<boolean>} Connection status
+         */
         async isFitbitDeviceConnected(userId) {
             try {
-                //const deviceConfig = await this.get(`users/${userId}/deviceConfig`);
                 const deviceConfig = await this.database.ref(`users/${userId}/deviceConfig`)
                     .once('value');
                 const deviceConfigVal = deviceConfig.val();
@@ -290,11 +393,43 @@ const dbReadyPromise = new Promise((resolve) => {
             }
         }
 
-        /*async saveActivityForDay(userId, date, activityData) {
+        /**
+         * Saves or updates activity data for a specific day
+         * Maintains a 7-day rolling window of activity data
+         * @param {string} userId - User ID
+         * @param {string} date - Activity date
+         * @param {Object} activityData - Activity metrics
+         * @returns {Promise<boolean>} Success status
+         */
+        async saveActivityForDay(userId, date, activityData) {
             try {
                 console.log("In saveActivityForDay");
                 
-                // Create the activity object
+                // Get existing activities
+                const activitiesRef = this.database.ref(`users/${userId}/activities`);
+                const snapshot = await activitiesRef.once('value');
+                const activities = snapshot.val() || {};
+                
+                // Check if current date exists
+                if (activities[date]) {
+                    // Update existing record
+                    const activity = {
+                        steps: activityData.steps || 0,
+                        activeMinutes: activityData.activeMinutes || 0,
+                        averageHeartRate: activityData.averageHeartRate || 0,
+                        points: activityData.points || 0
+                    };
+                    
+                    await activitiesRef.child(date).update(activity);
+                    console.log(`Activity data updated for ${date}`);
+                    return true;
+                }
+                
+                // Handle new day's data
+                const sortedActivities = Object.entries(activities)
+                    .sort((a, b) => new Date(b[0]) - new Date(a[0]));
+                
+                // Create new activity record
                 const activity = {
                     steps: activityData.steps || 0,
                     activeMinutes: activityData.activeMinutes || 0,
@@ -302,125 +437,82 @@ const dbReadyPromise = new Promise((resolve) => {
                     points: activityData.points || 0
                 };
         
-                // Save to specific date path
-                await this.database.ref(`users/${userId}/activities/${date}`).set(activity);
-                console.log(`Activity data saved for ${date}`);
+                // Maintain 7-day window
+                if (sortedActivities.length >= 7) {
+                    // Remove oldest records beyond 7 days
+                    const datesToRemove = sortedActivities.slice(6).map(([date]) => date);
+                    
+                    for (const oldDate of datesToRemove) {
+                        await activitiesRef.child(oldDate).remove();
+                    }
+                }
+        
+                // Add new record
+                await activitiesRef.child(date).set(activity);
+                console.log(`New activity data saved for ${date}`);
                 return true;
-                
+        
             } catch (error) {
                 console.error('Error saving activity data:', error);
                 throw error;
             }
-        }*/
+        }
 
-            async saveActivityForDay(userId, date, activityData) {
-                try {
-                    console.log("In saveActivityForDay");
-                    
-                    // First get all existing activities
-                    const activitiesRef = this.database.ref(`users/${userId}/activities`);
-                    const snapshot = await activitiesRef.once('value');
-                    const activities = snapshot.val() || {};
-                    
-                    // Check if current date already exists
-                    if (activities[date]) {
-                        // Just update the existing record
-                        const activity = {
-                            steps: activityData.steps || 0,
-                            activeMinutes: activityData.activeMinutes || 0,
-                            averageHeartRate: activityData.averageHeartRate || 0,
-                            points: activityData.points || 0
-                        };
-                        
-                        await activitiesRef.child(date).update(activity);
-                        console.log(`Activity data updated for ${date}`);
-                        return true;
-                    }
-                    
-                    // If it's a new day's data
-                    // Convert to array of [date, data] pairs and sort by date
-                    const sortedActivities = Object.entries(activities)
-                        .sort((a, b) => new Date(b[0]) - new Date(a[0]));
-                    
-                    // Create the new activity object
-                    const activity = {
-                        steps: activityData.steps || 0,
-                        activeMinutes: activityData.activeMinutes || 0,
-                        averageHeartRate: activityData.averageHeartRate || 0,
-                        points: activityData.points || 0
-                    };
-            
-                    // If we already have 7 or more records
-                    if (sortedActivities.length >= 7) {
-                        // Get dates to remove (oldest dates beyond 7 days)
-                        const datesToRemove = sortedActivities.slice(6).map(([date]) => date);
-                        
-                        // Remove old records
-                        for (const oldDate of datesToRemove) {
-                            await activitiesRef.child(oldDate).remove();
-                        }
-                    }
-            
-                    // Add new record
-                    await activitiesRef.child(date).set(activity);
-                    console.log(`New activity data saved for ${date}`);
-                    return true;
-            
-                } catch (error) {
-                    console.error('Error saving activity data:', error);
-                    throw error;
-                }
-            }
+        /**
+         * Retrieves activity data for past days
+         * @param {string} userId - User ID
+         * @param {number} days - Number of days to retrieve (default: 7)
+         * @returns {Promise<Object|null>} Activity data organized by user ID
+         */
+    async getActivityDataForPastDays(userId, days = 7) {
+        try {
+            const activities = [];
 
-        async getActivityDataForPastDays(userId, days = 7) {
-            try {
-                // Calculate dates
-                const endDate = new Date();
-                const activities = [];
+            // Get activity data from database
+            const activityRef = this.database.ref(`users/${userId}/activities`);
+            const snapshot = await activityRef.orderByKey()
+                .limitToLast(days)
+                .once('value');
         
-                // Get activity data from database
-                const activityRef = this.database.ref(`users/${userId}/activities`);
-                const snapshot = await activityRef.orderByKey()
-                    .limitToLast(days)
-                    .once('value');
-                
-                const activityData = snapshot.val();
-        
-                if (activityData) {
-                    // Convert object to array and format data
-                    Object.keys(activityData).forEach(date => {
-                        const activity = activityData[date];
-                        activities.push({
-                            steps: activity.steps || 0,
-                            duration: activity.activeMinutes || 0,
-                            avgHeartRate: activity.averageHeartRate || 0,
-                            points: activity.points || 0,
-                            day: date
-                        });
+            const activityData = snapshot.val();
+
+            if (activityData) {
+                // Transform object to array and format data
+                Object.keys(activityData).forEach(date => {
+                    const activity = activityData[date];
+                    activities.push({
+                        steps: activity.steps || 0,
+                        duration: activity.activeMinutes || 0,
+                        avgHeartRate: activity.averageHeartRate || 0,
+                        points: activity.points || 0,
+                        day: date
                     });
-        
-                    // Sort by date (newest first)
-                    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
-                    // Store in the required format
-                    const storedActivityData = {
-                        [userId]: activities
-                    };
-                    console.log("storedActivityData:: ",storedActivityData)
-                    return storedActivityData;
-                }
-        
-                return null;
-        
-            } catch (error) {
-                console.error('Error getting activity data:', error);
-                return null;
+                });
+
+                // Sort activities by date (newest first)
+                activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                // Format data structure
+                const storedActivityData = {
+                    [userId]: activities
+                };
+                console.log("storedActivityData:: ",storedActivityData)
+                return storedActivityData;
             }
+
+            return null;
+
+        } catch (error) {
+            console.error('Error getting activity data:', error);
+            return null;
         }
     }
-    const db = new FirebaseDB();
-    window.db = db;
+}
+
+// Initialize database instance
+const db = new FirebaseDB();
+window.db = db;
 });
 
-// Export the ready promise
+// Export database ready promise
 window.dbReady = dbReadyPromise;
