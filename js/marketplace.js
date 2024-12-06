@@ -1,11 +1,31 @@
-// marketplace.js
+/**
+ * @fileoverview Marketplace Management System
+ * Manages the virtual marketplace where users can spend sparks on products.
+ * Handles product display, purchase requests, transaction history, and 
+ * integration with the approval system for parent oversight.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Marketplace and purchase management implementation
+ */
+
+/**
+ * MarketplaceManager class handles all marketplace operations including
+ * product display, purchase flows, and transaction history tracking.
+ */
 class MarketplaceManager {
+    /**
+     * Initializes marketplace manager with empty state
+     */
     constructor() {
         this.currentUser = null;
         this.products = [];
         this.storageKey = 'marketplaceItems';
     }
 
+    /**
+     * Initializes the marketplace with user context and loads necessary data
+     * 
+     * @param {Object} user - Current user object
+     */
     initialize(user) {
         this.currentUser = user;
         this.loadProducts();
@@ -13,6 +33,9 @@ class MarketplaceManager {
         this.renderMarketplace();
     }
 
+    /**
+     * Sets up event listeners for marketplace interactions
+     */
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.matches('.purchase-btn')) {
@@ -21,13 +44,19 @@ class MarketplaceManager {
         });
     }
 
+    /**
+     * Loads available products from local storage
+     */
     loadProducts() {
-        // Load from localStorage
         this.products = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
     }
 
+    /**
+     * Renders the complete marketplace interface including products and balance
+     */
     renderMarketplace() {
         const container = document.getElementById('marketplace');
+        // Calculate available and remaining sparks considering pending approvals
         const availableSparks = window.dashboardManager.calculateTotalAvailableSparks();
         const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
         const pendingItem = pendingApprovals.find(approval => 
@@ -35,10 +64,10 @@ class MarketplaceManager {
             approval.status === 'pending'
         );
     
-        // Calculate remaining balance after pending item
         const remainingSparks = pendingItem ? availableSparks - pendingItem.cost : availableSparks;
         const remainingDollars = remainingSparks / 1000;
         
+        // Generate marketplace HTML
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
@@ -66,37 +95,14 @@ class MarketplaceManager {
                     const canAfford = remainingSparks >= sparkCost;
                     const isPending = this.isPendingApproval(product.id);
                     
-                    return `
-                        <div class="product-card">
-                            <div class="product-image">
-                                <img src="/api/placeholder/400/320" alt="${product.name}">
-                            </div>
-                            <div class="product-details">
-                                <h3 class="product-name">${product.name}</h3>
-                                <div class="product-cost">
-                                    <div class="cost-row">
-                                        <span>${sparkCost.toLocaleString()} sparks</span>
-                                        <span>$${Math.ceil(product.dollarValue * 100) / 100}</span>
-                                    </div>
-                                </div>
-                                ${isPending ? 
-                                    '<div class="pending-status">Pending Approval</div>' :
-                                    `<button class="btn purchase-btn" 
-                                        data-product-id="${product.id}"
-                                        ${!canAfford ? 'disabled' : ''}>
-                                        ${canAfford ? 'Request Purchase' : 'Not Enough Sparks'}
-                                    </button>`
-                                }
-                            </div>
-                        </div>
-                    `;
+                    return this.createProductCard(product, remainingSparks);
                 }).join('')}
             </div>
     
             ${this.renderPurchaseHistory()}
         `;
     
-        // Add event listeners for purchase buttons
+        // Add event listeners for purchase interactions
         const purchaseButtons = container.querySelectorAll('.purchase-btn');
         purchaseButtons.forEach(button => {
             button.addEventListener('click', (e) => {
@@ -106,12 +112,18 @@ class MarketplaceManager {
         });
     }
 
+    /**
+     * Generates HTML for a single product card
+     * 
+     * @param {Object} product - Product data
+     * @param {number} availableSparks - Available spark balance
+     * @returns {string} HTML string for product card
+     */
     createProductCard(product, availableSparks) {
         const sparkCost = product.dollarValue * 1000;
         const canAfford = availableSparks >= sparkCost;
         const isPending = this.isPendingApproval(product.id);
         
-        // Round up to nearest cent for display
         const displayDollars = Math.ceil(product.dollarValue * 100) / 100;
         
         return `
@@ -140,10 +152,16 @@ class MarketplaceManager {
         `;
     }
 
+    /**
+     * Displays purchase confirmation modal for selected product
+     * 
+     * @param {string} productId - ID of selected product
+     */
     showPurchaseModal(productId) {
         const product = this.products.find(p => p.id === productId);
         if (!product) return;
 
+        // Create modal dialog
         const modal = document.createElement('div');
         modal.className = 'purchase-modal';
         modal.innerHTML = `
@@ -162,10 +180,11 @@ class MarketplaceManager {
             </div>
         `;
 
+        // Create modal overlay
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
         
-        // Add proper event listeners
+        // Setup modal interaction handlers
         const confirmBtn = modal.querySelector('.confirm-btn');
         const cancelBtn = modal.querySelector('.cancel-btn');
         
@@ -180,12 +199,19 @@ class MarketplaceManager {
         document.body.appendChild(overlay);
         document.body.appendChild(modal);
         
+        // Animate modal appearance
         setTimeout(() => {
             modal.classList.add('visible');
             overlay.classList.add('visible');
         }, 10);
     }
 
+    /**
+     * Checks if product has a pending approval request
+     * 
+     * @param {string} productId - Product identifier
+     * @returns {boolean} True if approval is pending
+     */
     isPendingApproval(productId) {
         const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
         return pendingApprovals.some(approval => 
@@ -195,6 +221,9 @@ class MarketplaceManager {
         );
     }
 
+    /**
+     * Closes purchase confirmation modal with animation
+     */
     closePurchaseModal() {
         const modal = document.querySelector('.purchase-modal');
         const overlay = document.querySelector('.modal-overlay');
@@ -209,9 +238,14 @@ class MarketplaceManager {
         }
     }
 
+    /**
+     * Processes purchase request and creates approval request
+     * 
+     * @param {string} productId - ID of product to purchase
+     */
     requestPurchase(productId) {
         try {
-            // Find the product
+            // Validate product exists
             const product = this.products.find(p => p.id === productId);
             if (!product) {
                 console.error('Product not found:', productId);
@@ -219,18 +253,17 @@ class MarketplaceManager {
                 return;
             }
     
-            // Calculate costs
+            // Validate sufficient funds
             const sparkCost = product.dollarValue * 1000;
             const availableSparks = window.dashboardManager.calculateTotalAvailableSparks();
     
-            // Validate sufficient sparks
             if (availableSparks < sparkCost) {
                 window.dashboardManager.showNotification('Not enough sparks available');
                 this.closePurchaseModal();
                 return;
             }
     
-            // Check if already pending
+            // Check for existing pending request
             const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
             const isAlreadyPending = pendingApprovals.some(
                 approval => approval.itemId === productId && 
@@ -244,7 +277,7 @@ class MarketplaceManager {
                 return;
             }
     
-            // Create new request
+            // Create purchase request
             const newRequest = {
                 id: Date.now().toString(),
                 childId: this.currentUser.userId,
@@ -262,7 +295,7 @@ class MarketplaceManager {
                 }
             };
     
-            // First, ensure modal is removed from DOM
+            // Clean up modal
             const modal = document.querySelector('.purchase-modal');
             const overlay = document.querySelector('.modal-overlay');
             if (modal) {
@@ -272,11 +305,11 @@ class MarketplaceManager {
                 overlay.remove();
             }
     
-            // Add to pending approvals
+            // Save pending approval
             pendingApprovals.push(newRequest);
             localStorage.setItem('pendingApprovals', JSON.stringify(pendingApprovals));
     
-            // Create a temporary hold on sparks
+            // Create spark hold
             const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
             sparkHolds.push({
                 id: newRequest.id,
@@ -287,34 +320,28 @@ class MarketplaceManager {
             });
             localStorage.setItem('sparkHolds', JSON.stringify(sparkHolds));
     
-            // Show notification
             window.dashboardManager.showNotification('Purchase request sent to parent');
     
-            // Log the transaction attempt
             console.log('Purchase request created:', {
                 request: newRequest,
                 availableSparks,
                 remainingSparks: availableSparks - sparkCost
             });
     
-            // Re-render the marketplace to show updated status
             this.renderMarketplace();
     
         } catch (error) {
             console.error('Error processing purchase request:', error);
             window.dashboardManager.showNotification('Error processing request. Please try again.');
-            // Ensure modal is closed even on error
-            const modal = document.querySelector('.purchase-modal');
-            const overlay = document.querySelector('.modal-overlay');
-            if (modal) {
-                modal.remove();
-            }
-            if (overlay) {
-                overlay.remove();
-            }
+            this.closePurchaseModal();
         }
     }
     
+    /**
+     * Gets currently pending item for user if any exists
+     * 
+     * @returns {Object|undefined} Pending approval item
+     */
     getSelectedPendingItem() {
         const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
         return pendingApprovals.find(approval => 
@@ -323,15 +350,21 @@ class MarketplaceManager {
         );
     }
 
+    /**
+     * Renders user's purchase history
+     * 
+     * @returns {string} HTML string for purchase history
+     */
     renderPurchaseHistory() {
         try {
+            // Get and filter transactions
             const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
             const approvedPurchases = sparkTransactions
                 .filter(transaction => {
                     return transaction && 
                         transaction.type === 'purchase' && 
                         transaction.childId === this.currentUser.userId &&
-                        transaction.dollarValue !== undefined;  // Add null check for dollarValue
+                        transaction.dollarValue !== undefined;
                 })
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
@@ -339,16 +372,18 @@ class MarketplaceManager {
                 return '';
             }
     
+            // Generate purchase history HTML
             return `
                 <div class="purchase-history">
                     <h3>Purchase History</h3>
                     <div class="history-items">
                         ${approvedPurchases.map(purchase => {
-                            // Add null checks and default values
                             const dollarValue = purchase.dollarValue || 0;
                             const cost = purchase.cost || 0;
                             const itemName = purchase.itemName || 'Unknown Item';
-                            const timestamp = purchase.timestamp ? new Date(purchase.timestamp).toLocaleDateString() : 'Unknown Date';
+                            const timestamp = purchase.timestamp ? 
+                                new Date(purchase.timestamp).toLocaleDateString() : 
+                                'Unknown Date';
     
                             return `
                                 <div class="history-item">
@@ -370,10 +405,15 @@ class MarketplaceManager {
             `;
         } catch (error) {
             console.error('Error rendering purchase history:', error);
-            return ''; // Return empty string on error
+            return '';
         }
     }
 
+    /**
+     * Gets list of approved purchases for current user
+     * 
+     * @returns {Array} Sorted array of approved purchases
+     */
     getApprovedPurchases() {
         const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
         return sparkTransactions
@@ -385,6 +425,6 @@ class MarketplaceManager {
     }
 }
 
-// Initialize marketplace manager
+// Initialize global instance of marketplace manager
 const marketplaceManager = new MarketplaceManager();
 window.marketplaceManager = marketplaceManager;

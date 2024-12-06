@@ -1,4 +1,21 @@
+/**
+ * @fileoverview Electronics Access Control System
+ * Manages access to gaming consoles and electronic devices through smart plug integration.
+ * Handles device selection, time tracking, power control, and session management with
+ * proper ramp up/down sequences for safe device operation.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Electronics control and time management implementation
+ */
+
+/**
+ * ElectronicsManager class handles all electronic device access control including
+ * device selection, time management, and power control through smart plugs.
+ */
 class ElectronicsManager {
+    /**
+     * Initializes manager with default state for tracking sessions and timing.
+     * Sets up tracking for user context, device selection, and timing states.
+     */
     constructor() {
         this.currentUser = null;
         this.selectedDevice = null;
@@ -7,9 +24,14 @@ class ElectronicsManager {
         this.state = 'idle'; // idle, rampUp, active, rampDown
         this.sessionStartTime = null; // Track when active session starts
         this.timeUsed = 0; // Track time used in current session (minutes)
-        this.hasUsedTime = false; // New flag to track if time has been used
+        this.hasUsedTime = false; // Track if time has been used in current session
     }
 
+    /**
+     * Initializes the manager with user context and sets up necessary data
+     * 
+     * @param {Object} user - Current user object
+     */
     initialize(user) {
         this.currentUser = user;
         this.loadAvailableTime();
@@ -17,17 +39,28 @@ class ElectronicsManager {
         this.renderElectronics();
     }
 
+    /**
+     * Loads available time based on user's spark balance
+     * Converts sparks to minutes using 100:1 ratio
+     */
     loadAvailableTime() {
         const totalAvailable = window.dashboardManager.calculateTotalAvailableSparks();
         this.timeAvailable = Math.ceil(totalAvailable / 100); // 100:1 conversion now
     }
 
+    /**
+     * Displays temporary notification messages to the user
+     * 
+     * @param {string} message - Message to display
+     */
     showNotification(message) {
+        // Create and setup notification element
         const toast = document.createElement('div');
         toast.className = 'toast-notification';
         toast.textContent = message;
         document.body.appendChild(toast);
 
+        // Handle animation timing for appearance and removal
         setTimeout(() => toast.classList.add('visible'), 10);
         setTimeout(() => {
             toast.classList.remove('visible');
@@ -35,6 +68,9 @@ class ElectronicsManager {
         }, 2000);
     }
 
+    /**
+     * Sets up event listeners for device selection and control
+     */
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.matches('.device-option')) {
@@ -46,13 +82,22 @@ class ElectronicsManager {
         });
     }
 
+    /**
+     * Controls smart plug power state for selected device
+     * 
+     * @param {string} deviceId - Device identifier
+     * @param {string} action - Control action ('on' or 'off')
+     * @returns {Promise<boolean>} Success status of control operation
+     */
     async controlPlug(deviceId, action) {
         try {
+            // Verify device configuration
             const config = window.deviceConfigManager.getDeviceConfig(deviceId);
             if (!config || !config.enabled || !config.ip) {
                 throw new Error('Device not configured or disabled');
             }
     
+            // Send control request to smart plug
             const response = await fetch('http://localhost:3001/control-device', {
                 method: 'POST',
                 headers: {
@@ -78,21 +123,32 @@ class ElectronicsManager {
         }
     }
 
+    /**
+     * Updates selected device and refreshes display
+     * 
+     * @param {string} deviceId - Device identifier
+     */
     selectDevice(deviceId) {
         this.selectedDevice = deviceId;
         this.renderElectronics();
     }
 
+    /**
+     * Initiates device unlock sequence including ramp-up period
+     * Handles power control and session timing
+     */
     async startUnlock() {
         if (!this.selectedDevice || this.timeAvailable <= 0) return;
     
         try {
+            // Attempt to power on device
             const plugSuccess = await this.controlPlug(this.selectedDevice, 'on');
             if (!plugSuccess) {
                 this.showNotification('Failed to turn on device. Please try again.');
                 return;
             }
     
+            // Initialize ramp-up sequence
             this.state = 'rampUp';
             const rampUpTime = 15; // 15 seconds for testing
             let timeLeft = rampUpTime;
@@ -101,12 +157,13 @@ class ElectronicsManager {
                 clearInterval(this.countdownInterval);
             }
     
+            // Start countdown sequence
             this.countdownInterval = setInterval(() => {
                 if (timeLeft <= 0) {
                     if (this.state === 'rampUp') {
                         // Transition to active state
                         this.state = 'active';
-                        this.sessionStartTime = Date.now(); // Record start time
+                        this.sessionStartTime = Date.now();
                         timeLeft = this.timeAvailable * 60;
                         this.renderElectronics();
                     } else if (this.state === 'active' && timeLeft <= 0) {
@@ -134,6 +191,9 @@ class ElectronicsManager {
         }
     }
 
+    /**
+     * Updates time used in current session
+     */
     updateTimeUsed() {
         if (this.sessionStartTime && this.state === 'active') {
             const timeUsedMs = Date.now() - this.sessionStartTime;
@@ -141,17 +201,19 @@ class ElectronicsManager {
         }
     }
 
+    /**
+     * Ends current session and updates time tracking
+     */
     async endSession() {
         this.updateTimeUsed();
         
-        // Update available time locally
+        // Update available time and usage flag
         this.timeAvailable = Math.max(0, this.timeAvailable - this.timeUsed);
-        this.hasUsedTime = true; // Set flag when time is used
+        this.hasUsedTime = true;
         
-        // Turn off device
+        // Power off device and reset session state
         await this.controlPlug(this.selectedDevice, 'off');
         
-        // Reset session
         clearInterval(this.countdownInterval);
         this.state = 'idle';
         this.selectedDevice = null;
@@ -161,6 +223,11 @@ class ElectronicsManager {
         this.renderElectronics();
     }
 
+    /**
+     * Updates countdown display based on current state
+     * 
+     * @param {number} seconds - Seconds remaining in current state
+     */
     updateCountdown(seconds) {
         const countdownElement = document.getElementById('countdown');
         if (!countdownElement) return;
@@ -168,6 +235,7 @@ class ElectronicsManager {
         let display = '';
         let stateClass = '';
     
+        // Set display text and style based on current state
         switch (this.state) {
             case 'rampUp':
                 display = 'Time to Turn On Console';
@@ -189,6 +257,9 @@ class ElectronicsManager {
         countdownElement.textContent = display;
     }
 
+    /**
+     * Renders main electronics interface including time conversion display
+     */
     renderElectronics() {
         const container = document.getElementById('electronics');
         const sparksValue = this.hasUsedTime ? 
@@ -220,9 +291,15 @@ class ElectronicsManager {
         `;
     }
 
+    /**
+     * Renders device selection interface with enabled devices
+     * 
+     * @returns {string} HTML string for device selection
+     */
     renderDeviceSelection() {
         const configs = window.deviceConfigManager.getAllConfigs();
         
+        // Filter for enabled devices only
         const enabledDevices = Object.entries(configs)
             .filter(([_, config]) => config.enabled)
             .map(([id, config]) => ({
@@ -260,6 +337,11 @@ class ElectronicsManager {
         `;
     }
 
+    /**
+     * Renders countdown interface for active sessions
+     * 
+     * @returns {string} HTML string for countdown display
+     */
     renderCountdown() {
         return `
             <div class="countdown-section">
@@ -273,6 +355,9 @@ class ElectronicsManager {
         `;
     }
 
+    /**
+     * Initiates manual session stop with ramp-down sequence
+     */
     async stopSession() {
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
@@ -280,6 +365,7 @@ class ElectronicsManager {
     
         this.updateTimeUsed();
         
+        // Start ramp-down sequence
         this.state = 'rampDown';
         const rampDownTime = 15;
         let timeLeft = rampDownTime;
@@ -294,6 +380,10 @@ class ElectronicsManager {
         }, 1000);
     }
 
+    /**
+     * Performs cleanup when navigating away from electronics section
+     * Ensures proper session closure and state reset
+     */
     cleanup() {
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
@@ -309,6 +399,6 @@ class ElectronicsManager {
     }
 }
 
-// Initialize electronics manager
+// Initialize global instance of electronics manager
 const electronicsManager = new ElectronicsManager();
 window.electronicsManager = electronicsManager;

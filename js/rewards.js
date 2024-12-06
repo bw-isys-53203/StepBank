@@ -1,11 +1,31 @@
-// rewards.js
+/**
+ * @fileoverview Rewards Management System
+ * Handles reward catalog, redemption process, and parent approval workflow.
+ * Manages point-based rewards including gift cards and screen time bonuses,
+ * with support for parental oversight of redemptions.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Rewards system and redemption implementation
+ */
+
+/**
+ * RewardsManager class handles all aspects of the rewards system including
+ * catalog management, redemption processing, and approval workflow.
+ */
 class RewardsManager {
+    /**
+     * Initializes manager with empty states for user context and rewards
+     */
     constructor() {
         this.currentUser = null;
         this.rewards = [];
         this.pendingRewards = [];
     }
 
+    /**
+     * Initializes the rewards manager with user context and sets up interface
+     * 
+     * @param {Object} user - Current user object
+     */
     initialize(user) {
         this.currentUser = user;
         this.loadRewards();
@@ -13,6 +33,10 @@ class RewardsManager {
         this.renderRewards();
     }
 
+    /**
+     * Sets up event listeners for reward interactions
+     * Handles redemption and approval/denial actions
+     */
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.matches('.redeem-btn')) {
@@ -32,8 +56,12 @@ class RewardsManager {
         });
     }
 
+    /**
+     * Loads reward catalog and pending redemptions
+     * Currently uses static data, but designed for API integration
+     */
     loadRewards() {
-        // In a real app, this would fetch from an API
+        // Static reward catalog (would be API-driven in production)
         this.rewards = [
             {
                 id: 'roblox_1',
@@ -53,10 +81,14 @@ class RewardsManager {
             }
         ];
 
-        // Load pending rewards from localStorage
+        // Load pending redemptions from storage
         this.pendingRewards = JSON.parse(localStorage.getItem('pendingRewards') || '[]');
     }
 
+    /**
+     * Renders complete rewards interface including available rewards
+     * and pending approvals for parent users
+     */
     renderRewards() {
         const container = document.getElementById('rewards');
         const availablePoints = this.getAvailablePoints();
@@ -85,6 +117,13 @@ class RewardsManager {
         `;
     }
 
+    /**
+     * Creates HTML for individual reward card
+     * 
+     * @param {Object} reward - Reward item data
+     * @param {number} availablePoints - User's current point balance
+     * @returns {string} HTML string for reward card
+     */
     createRewardCard(reward, availablePoints) {
         const isPending = this.pendingRewards.some(pr => pr.rewardId === reward.id);
         const canAfford = availablePoints >= reward.points;
@@ -110,6 +149,11 @@ class RewardsManager {
         `;
     }
 
+    /**
+     * Renders pending approval section for parent users
+     * 
+     * @returns {string} HTML string for pending approvals section
+     */
     renderPendingApprovals() {
         if (this.pendingRewards.length === 0) return '';
 
@@ -142,10 +186,17 @@ class RewardsManager {
         `;
     }
 
+    /**
+     * Handles reward redemption request based on user type
+     * Routes to direct processing for parents or approval flow for children
+     * 
+     * @param {string} rewardId - ID of reward to redeem
+     */
     async handleRewardRedemption(rewardId) {
         const reward = this.rewards.find(r => r.id === rewardId);
         if (!reward) return;
 
+        // Parent users can redeem directly, children require approval
         if (this.currentUser.isParent) {
             await this.processReward(reward);
         } else {
@@ -155,20 +206,29 @@ class RewardsManager {
         this.renderRewards();
     }
 
+    /**
+     * Processes approved reward redemption
+     * Handles different reward types (screen time, gift cards)
+     * 
+     * @param {Object} reward - Reward to process
+     */
     async processReward(reward) {
-        // In a real app, this would make API calls
+        // Placeholder for API integration
         switch (reward.type) {
             case 'screen_time':
-                // Implement screen time addition
                 console.log(`Added ${reward.duration} minutes of screen time`);
                 break;
             case 'gift_card':
-                // Implement gift card generation
                 console.log(`Generated $${reward.value} gift card`);
                 break;
         }
     }
 
+    /**
+     * Creates parent approval request for child reward redemption
+     * 
+     * @param {Object} reward - Reward being requested
+     */
     requestParentApproval(reward) {
         const pendingReward = {
             rewardId: reward.id,
@@ -180,6 +240,11 @@ class RewardsManager {
         localStorage.setItem('pendingRewards', JSON.stringify(this.pendingRewards));
     }
 
+    /**
+     * Processes approved reward request
+     * 
+     * @param {string} rewardId - ID of reward to approve
+     */
     async approveReward(rewardId) {
         const pendingReward = this.pendingRewards.find(pr => pr.rewardId === rewardId);
         if (!pendingReward) return;
@@ -187,12 +252,18 @@ class RewardsManager {
         const reward = this.rewards.find(r => r.id === rewardId);
         await this.processReward(reward);
 
+        // Remove from pending list after processing
         this.pendingRewards = this.pendingRewards.filter(pr => pr.rewardId !== rewardId);
         localStorage.setItem('pendingRewards', JSON.stringify(this.pendingRewards));
         
         this.renderRewards();
     }
 
+    /**
+     * Denies pending reward request
+     * 
+     * @param {string} rewardId - ID of reward to deny
+     */
     denyReward(rewardId) {
         this.pendingRewards = this.pendingRewards.filter(pr => pr.rewardId !== rewardId);
         localStorage.setItem('pendingRewards', JSON.stringify(this.pendingRewards));
@@ -200,8 +271,12 @@ class RewardsManager {
         this.renderRewards();
     }
 
+    /**
+     * Gets user's current available point balance
+     * 
+     * @returns {number} Available points balance
+     */
     getAvailablePoints() {
-        // Fallback points if dashboard manager isn't available
         const defaultPoints = 1000;
         
         try {
@@ -217,6 +292,6 @@ class RewardsManager {
     }
 }
 
-// Initialize rewards manager
+// Initialize global instance of rewards manager
 const rewardsManager = new RewardsManager();
-window.rewardsManager = rewardsManager; // Make it globally accessible
+window.rewardsManager = rewardsManager;

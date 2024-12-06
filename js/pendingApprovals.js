@@ -1,20 +1,45 @@
-// pendingApprovals.js
+/**
+ * @fileoverview Pending Approvals Management System
+ * Handles parent approval workflow for marketplace purchases and item management.
+ * Manages the approval/denial process, item catalog maintenance, and transaction
+ * history tracking for the marketplace system.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Approval system and item management implementation
+ */
+
+/**
+ * PendingApprovalsManager class handles all aspects of the approval workflow
+ * including request management, item catalog maintenance, and transaction tracking.
+ */
 class PendingApprovalsManager {
+    /**
+     * Initializes manager with empty user state and storage key for items
+     */
     constructor() {
         this.currentUser = null;
         this.storageKey = 'marketplaceItems';
     }
 
+    /**
+     * Initializes the approvals manager with user context
+     * 
+     * @param {Object} user - Current user object
+     */
     initialize(user) {
         this.currentUser = user;
         this.renderApprovals();
     }
 
+    /**
+     * Renders the complete approvals interface including pending requests,
+     * item management, and available items catalog
+     */
     renderApprovals() {
         const container = document.getElementById('pendingApprovals');
         const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
         const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
         
+        // Generate complete approvals interface HTML
         container.innerHTML = `
             <nav class="nav">
                 <div class="logo">
@@ -89,7 +114,7 @@ class PendingApprovalsManager {
             </div>
         `;
     
-        // Add live spark conversion
+        // Setup live dollar to spark conversion
         const valueInput = document.getElementById('itemValue');
         if (valueInput) {
             valueInput.addEventListener('input', (e) => {
@@ -100,15 +125,21 @@ class PendingApprovalsManager {
         }
     }
 
+    /**
+     * Adds new item to marketplace catalog
+     * Validates input and updates storage
+     */
     addItem() {
         const name = document.getElementById('itemName').value;
         const dollarValue = Number(document.getElementById('itemValue').value);
 
+        // Validate required fields
         if (!name || !dollarValue) {
             alert('Please fill in all fields');
             return;
         }
 
+        // Add new item to storage
         const items = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
         items.push({
             id: Date.now().toString(),
@@ -121,6 +152,11 @@ class PendingApprovalsManager {
         this.renderApprovals();
     }
 
+    /**
+     * Removes item from marketplace catalog
+     * 
+     * @param {string} itemId - ID of item to remove
+     */
     removeItem(itemId) {
         try {
             const items = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
@@ -134,6 +170,11 @@ class PendingApprovalsManager {
         }
     }
 
+    /**
+     * Renders list of pending approval requests
+     * 
+     * @returns {string} HTML string for pending requests
+     */
     renderPendingRequests() {
         const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
         
@@ -160,9 +201,16 @@ class PendingApprovalsManager {
         `).join('');
     }
 
+    /**
+     * Handles approval or denial of purchase requests
+     * Manages transaction records, item availability, and spark balance updates
+     * 
+     * @param {string} requestId - ID of request to process
+     * @param {boolean} approved - True if request is approved, false if denied
+     */
     handleApproval(requestId, approved) {
         try {
-            // Get current pending approvals
+            // Retrieve and validate request
             const pendingApprovals = JSON.parse(localStorage.getItem('pendingApprovals') || '[]');
             const request = pendingApprovals.find(req => req.id === requestId);
             
@@ -171,14 +219,14 @@ class PendingApprovalsManager {
                 return;
             }
     
-            // Remove from pending approvals
+            // Remove from pending queue
             const updatedApprovals = pendingApprovals.filter(req => req.id !== requestId);
             localStorage.setItem('pendingApprovals', JSON.stringify(updatedApprovals));
     
             if (approved) {
-                // Handle approval
+                // Process approval
                 
-                // Add to spark transactions
+                // Record spark transaction
                 const sparkTransactions = JSON.parse(localStorage.getItem('sparkTransactions') || '[]');
                 sparkTransactions.push({
                     id: Date.now().toString(),
@@ -195,12 +243,12 @@ class PendingApprovalsManager {
                 });
                 localStorage.setItem('sparkTransactions', JSON.stringify(sparkTransactions));
     
-                // Remove from available items
+                // Update item availability
                 const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
                 const updatedItems = marketplaceItems.filter(item => item.id !== request.itemId);
                 localStorage.setItem(this.storageKey, JSON.stringify(updatedItems));
     
-                // Add to purchased items history
+                // Record purchase history
                 const purchasedItems = JSON.parse(localStorage.getItem('purchasedItems') || '[]');
                 purchasedItems.push({
                     ...request,
@@ -209,14 +257,14 @@ class PendingApprovalsManager {
                 });
                 localStorage.setItem('purchasedItems', JSON.stringify(purchasedItems));
     
-                // Clean up any spark holds
+                // Release spark hold
                 const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
                 const updatedHolds = sparkHolds.filter(hold => hold.id !== request.id);
                 localStorage.setItem('sparkHolds', JSON.stringify(updatedHolds));
             } else {
-                // Handle denial
+                // Process denial
                 
-                // Return item to available items if it was removed
+                // Restore item availability if needed
                 const marketplaceItems = JSON.parse(localStorage.getItem(this.storageKey) || '[]');
                 if (!marketplaceItems.some(item => item.id === request.itemId)) {
                     const itemToReturn = {
@@ -229,7 +277,7 @@ class PendingApprovalsManager {
                     localStorage.setItem(this.storageKey, JSON.stringify(marketplaceItems));
                 }
     
-                // Add to denied history
+                // Record denial history
                 const deniedItems = JSON.parse(localStorage.getItem('deniedItems') || '[]');
                 deniedItems.push({
                     ...request,
@@ -238,21 +286,19 @@ class PendingApprovalsManager {
                 });
                 localStorage.setItem('deniedItems', JSON.stringify(deniedItems));
     
-                // Clean up any spark holds
+                // Release spark hold
                 const sparkHolds = JSON.parse(localStorage.getItem('sparkHolds') || '[]');
                 const updatedHolds = sparkHolds.filter(hold => hold.id !== request.id);
                 localStorage.setItem('sparkHolds', JSON.stringify(updatedHolds));
             }
     
-            // Re-render approvals screen
+            // Update UI
             this.renderApprovals();
-    
-            // Show notification
             window.dashboardManager.showNotification(
                 `Request ${approved ? 'approved' : 'denied'} successfully!`
             );
     
-            // Log the action
+            // Log action for debugging
             console.log('Approval action completed:', {
                 requestId,
                 approved,
@@ -267,6 +313,6 @@ class PendingApprovalsManager {
     }
 }
 
-// Initialize approvals manager
+// Initialize global instance of approvals manager
 const pendingApprovalsManager = new PendingApprovalsManager();
 window.pendingApprovalsManager = pendingApprovalsManager;
