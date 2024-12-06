@@ -1,10 +1,27 @@
-// auth.js
+/**
+ * @fileoverview Authentication Management System
+ * Handles all user authentication operations including login, registration,
+ * and session management for both parent and child accounts. Manages credential
+ * validation, token-based registration, and secure storage of user sessions.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Authentication system implementation
+ */
+
+/**
+ * AuthManager class handles all authentication-related operations including
+ * user registration, login, session management, and authentication state.
+ */
 class AuthManager {
+    /**
+     * Initializes the authentication manager and sets up event listeners.
+     * Creates initial state with no logged-in user and sets up temporary
+     * test accounts for development.
+     */
     constructor() {
         this.currentUser = null;
         this.initializeListeners();
         
-        // Temporary hardcoded users
+        // Temporary hardcoded users for testing and development
         this.hardcodedUsers = {
             'Tommy': { password: '123456', id: 'child1', isParent: false },
             'Sarah': { password: '123456', id: 'child2', isParent: false }, 
@@ -12,65 +29,48 @@ class AuthManager {
         };
     }
  
+    /**
+     * Sets up event listeners for authentication interface elements
+     * Primarily handles tab switching between login and registration
+     */
     initializeListeners() {
-        // Tab switching
+        // Initialize tab switching functionality
         document.querySelectorAll('.auth-tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchTab(tab));
         });
     }
  
+    /**
+     * Handles switching between authentication interface tabs
+     * Updates active states and shows corresponding form
+     * 
+     * @param {HTMLElement} tab - The tab element being switched to
+     */
     switchTab(tab) {
-        // Update active tab
+        // Update visual state of tabs
         document.querySelectorAll('.auth-tab').forEach(t => 
             t.classList.remove('active')
         );
         tab.classList.add('active');
  
-        // Show corresponding form
+        // Show selected form and hide others
         const formId = tab.dataset.tab + 'Form';
         document.querySelectorAll('.auth-form').forEach(form => 
             form.classList.add('hidden')
         );
         document.getElementById(formId).classList.remove('hidden');
     }
- /*
-    async handleLogin(username, password) {
-        // Temporary hardcoded login logic
-        const hardcodedUser = this.hardcodedUsers[username];
-        if (hardcodedUser && password === hardcodedUser.password) {
-            this.currentUser = {
-                username,
-                ...hardcodedUser
-            };
-            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-            showSection('dashboard');
-            return;
-        }
  
-        // Original login logic (commented out for now)
-        
-        if (!this.validateCredentials(username, password)) {
-            return;
-        }
- 
-        try {
-            this.currentUser = {
-                username,
-                isParent: false,
-                id: 'user_' + Math.random().toString(36).substr(2, 9)
-            };
-            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-            showSection('dashboard');
-        } catch (error) {
-            this.showError('loginForm', 'Login failed. Please try again.');
-        }
- 
-        this.showError('loginForm', 'Invalid credentials');
-    }
- */
+    /**
+     * Handles user login attempts by validating credentials against Firebase
+     * Authenticates users and establishes their session if successful
+     * 
+     * @param {string} username - User's username
+     * @param {string} password - User's password
+     */
     async handleLogin(username, password) {
         try {
-            // Get all users from Firebase
+            // Retrieve all users from Firebase for authentication
             const users = await db.getUsers();
      
             if (!users) {
@@ -90,14 +90,14 @@ class AuthManager {
      
             const [userId, userData] = user;
      
-            // Check password
+            // Validate password using hash comparison
             const hashedPassword = this.hashPassword(password);
             if (hashedPassword !== userData.passwordHash) {
                 this.showError('loginForm', 'Invalid credentials');
                 return;
             }
      
-            // Set current user with minimal required data
+            // Setup user session with essential data
             this.currentUser = {
                 userId,
                 username: userData.username,
@@ -115,6 +115,10 @@ class AuthManager {
         }
      }
 
+    /**
+     * Handles visibility of registration token field based on account type
+     * Shows token field only for child account registration
+     */
     handleAccountTypeChange() {
         const accountType = document.getElementById('accountType').value;
         const tokenGroup = document.getElementById('tokenGroup');
@@ -126,6 +130,13 @@ class AuthManager {
         }
     }
 
+    /**
+     * Handles user registration process for both parent and child accounts
+     * Routes to appropriate registration handler based on account type
+     * 
+     * @param {string} username - Desired username
+     * @param {string} password - Desired password
+     */
     async handleRegister(username, password) {
         if (!this.validateCredentials(username, password)) {
             return;
@@ -139,11 +150,18 @@ class AuthManager {
         }
     }
 
+    /**
+     * Handles parent account registration process
+     * Creates new parent user record in Firebase
+     * 
+     * @param {string} username - Desired username
+     * @param {string} password - Desired password
+     */
     async handleParentRegistration(username, password) {
         try {
             const passwordHash = this.hashPassword(password);
             
-            // Create parent user object
+            // Setup parent user data structure
             const userData = {
                 userId: 'user_' + Math.random().toString(36).substr(2, 9),
                 username,
@@ -152,14 +170,12 @@ class AuthManager {
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             };
     
-            // Save to Firebase
+            // Persist to Firebase and establish session
             await db.set(`users/${userData.userId}`, userData);
             
-            // Store user data locally
             this.currentUser = userData;
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
             
-            // Navigate to dashboard
             showSection('dashboard');
     
             console.log('Parent registered successfully!');
@@ -169,39 +185,17 @@ class AuthManager {
         }
     }
 
-    async handleParentRegistration(username, password) {
-        try {
-            const passwordHash = this.hashPassword(password);
-            
-            // Create parent user object
-            const userData = {
-                userId: 'user_' + Math.random().toString(36).substr(2, 9),
-                username,
-                passwordHash,
-                accountType: 'parent',
-                createdAt: firebase.database.ServerValue.TIMESTAMP
-            };
-
-            // Save to Firebase
-            await db.set(`users/${userData.userId}`, userData);
-            
-            // Store user data locally
-            this.currentUser = userData;
-            localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-            
-            // Navigate to dashboard
-            showSection('dashboard');
-
-            console.log('Parent registered successfully!');
-        } catch (error) {
-            console.error('Parent registration error:', error);
-            this.showError('registerForm', 'Registration failed. Please try again.');
-        }
-    }
-
+    /**
+     * Handles child account registration using parent-provided token
+     * Validates token and links child account to parent
+     * 
+     * @param {string} username - Desired username
+     * @param {string} password - Desired password
+     * @param {string} token - Registration token from parent
+     */
     async handleChildRegistration(username, password, token) {
         try {
-            // First, find parent using registration token
+            // Validate token and find parent
             const parent = await db.getParentByToken(token);
             
             if (!parent) {
@@ -209,7 +203,7 @@ class AuthManager {
                 return;
             }
     
-            // Find the child using token
+            // Find child record matching token
             let childId;
             let childData;
             
@@ -221,6 +215,7 @@ class AuthManager {
                 }
             }
     
+            // Validate child record and token status
             if (!childData) {
                 this.showError('registerForm', 'Invalid registration token.');
                 return;
@@ -233,9 +228,9 @@ class AuthManager {
     
             const passwordHash = this.hashPassword(password);
     
-            // Create new child user
+            // Create child user record
             const userData = {
-                userId: childId, // Use the same childId as userId
+                userId: childId,
                 username,
                 passwordHash,
                 accountType: 'child',
@@ -243,17 +238,13 @@ class AuthManager {
                 createdAt: firebase.database.ServerValue.TIMESTAMP
             };
     
-            // Save child as a new user
+            // Update database and establish session
             await db.set(`users/${childId}`, userData);
-    
-            // Update parent's child record to mark as registered
             await db.set(`users/${parent.userId}/children/${childId}/isRegistered`, true);
     
-            // Store user data locally
             this.currentUser = userData;
             localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
     
-            // Navigate to dashboard
             showSection('dashboard');
     
             console.log('Child registered successfully!');
@@ -263,10 +254,24 @@ class AuthManager {
         }
     }
 
+    /**
+     * Creates a simple hash of the password for storage
+     * Note: This is a basic implementation and should be enhanced for production
+     * 
+     * @param {string} password - Password to hash
+     * @returns {string} Hashed password
+     */
     hashPassword(password) {
         return btoa(password);
     }
  
+    /**
+     * Validates username and password meet minimum requirements
+     * 
+     * @param {string} username - Username to validate
+     * @param {string} password - Password to validate
+     * @returns {boolean} True if credentials are valid
+     */
     validateCredentials(username, password) {
         if (!username || username.length < 3) {
             this.showError('loginForm', 'Username must be at least 3 characters.');
@@ -281,31 +286,42 @@ class AuthManager {
         return true;
     }
  
+    /**
+     * Displays error message to user with automatic timeout
+     * Creates or updates error message element within specified form
+     * 
+     * @param {string} formId - ID of form to show error in
+     * @param {string} message - Error message to display
+     */
     showError(formId, message) {
         const form = document.getElementById(formId);
         let errorDiv = form.querySelector('.auth-error');
         
+        // Create error element if it doesn't exist
         if (!errorDiv) {
             errorDiv = document.createElement('div');
             errorDiv.className = 'auth-error';
             form.appendChild(errorDiv);
         }
  
+        // Show error with automatic timeout
         errorDiv.textContent = message;
         errorDiv.classList.add('visible');
  
-        // Hide error after 3 seconds
         setTimeout(() => {
             errorDiv.classList.remove('visible');
         }, 3000);
     }
  
+    /**
+     * Handles user logout by clearing session data and resetting forms
+     */
     handleLogout() {
         this.currentUser = null;
         localStorage.removeItem('currentUser');
         showSection('authSection');
         
-        // Clear forms
+        // Reset all form fields
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
         document.getElementById('registerUsername').value = '';
@@ -313,6 +329,10 @@ class AuthManager {
         document.getElementById('accountType').value = '';
     }
  
+    /**
+     * Checks for existing authentication state on page load
+     * Restores user session if valid data exists in storage
+     */
     checkAuthState() {
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
@@ -321,22 +341,31 @@ class AuthManager {
         }
     }
  
-    // Helper method to get current user
+    /**
+     * Returns current user object if logged in
+     * @returns {Object|null} Current user data or null if not logged in
+     */
     getCurrentUser() {
         return this.currentUser;
     }
  
-    // Helper method to check if user is logged in
+    /**
+     * Checks if a user is currently logged in
+     * @returns {boolean} True if user is logged in
+     */
     isLoggedIn() {
         return this.currentUser !== null;
     }
  
-    // Helper method to check if current user is a parent
+    /**
+     * Checks if current user has parent privileges
+     * @returns {boolean} True if current user is a parent
+     */
     isParent() {
         return this.currentUser?.isParent || false;
     }
  }
  
- // Initialize auth manager
+ // Initialize global instance of authentication manager
  const authManager = new AuthManager();
- window.authManager = authManager; // Make it globally accessible
+ window.authManager = authManager;

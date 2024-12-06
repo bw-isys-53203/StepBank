@@ -1,3 +1,13 @@
+/**
+ * @fileoverview StepBank Electron Bridge Application (Production)
+ * Production version of the Electron application that provides system tray integration
+ * and smart plug control capabilities. Creates a bridge between the hosted web application
+ * and local network devices through an Express server. Includes production-specific
+ * configurations and security measures.
+ * 
+ * @revision SB-00001 - Brian W. - 12/05/2024 - Initial Release - Production Electron bridge implementation
+ */
+
 const { app, BrowserWindow, Tray, Menu } = require('electron');
 const express = require('express');
 const cors = require('cors');
@@ -5,16 +15,22 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// Global references to prevent garbage collection
 let tray = null;
 let mainWindow = null;
 
-// Production specific constants
+// Production environment configuration
 const APP_URL = 'https://bw-isys-53203.github.io/StepBank/';
 const BUILD_ENV = 'production';
 console.log('Running in production mode');
 console.log('Using APP_URL:', APP_URL);
 
-// Function to get the correct icon path
+/**
+ * Resolves the correct path to the tray icon based on packaging state
+ * Handles both development and production resource paths
+ * 
+ * @returns {string} Path to the tray icon
+ */
 function getIconPath() {
     if (app.isPackaged) {
         return path.join(process.resourcesPath, 'tray-icon.png');
@@ -22,6 +38,12 @@ function getIconPath() {
     return path.join(__dirname, 'tray-icon.png');
 }
 
+/**
+ * Resolves the correct path to the Python smart plug control script
+ * Ensures correct resource access in packaged production environment
+ * 
+ * @returns {string} Path to the Python script
+ */
 function getScriptPath() {
     if (app.isPackaged) {
         console.log('App path:', app.getAppPath());
@@ -31,17 +53,24 @@ function getScriptPath() {
     return path.join(__dirname, 'plug.py');
 }
 
+/**
+ * Sets up Express server to handle smart plug control requests
+ * Creates a secure bridge between web app and Python control script
+ * Production configuration with minimal logging
+ */
 function setupServer() {
     console.log('Setting up Express server...');
     const server = express();
     server.use(cors());
     server.use(express.json());
 
+    // Handle device control requests from hosted web app
     server.post('/control-device', (req, res) => {
         console.log('Received control-device request:', req.body);
         const { device, action, ip } = req.body;
         const scriptPath = getScriptPath();
     
+        // Execute Python script with proper path resolution
         const command = `python "${scriptPath}" ${device} ${action} --ip "${ip}"`;
         console.log('Executing command:', command);
     
@@ -64,8 +93,13 @@ function setupServer() {
     });
 }
 
+/**
+ * Creates system tray icon and context menu for production environment
+ * Provides minimal interface for application control
+ */
 function createTray() {
     try {
+        // Setup production tray icon
         const iconPath = getIconPath();
         console.log('Attempting to create tray with icon path:', iconPath);
         
@@ -77,6 +111,7 @@ function createTray() {
         tray = new Tray(iconPath);
         console.log('Tray created successfully');
 
+        // Create production context menu
         const contextMenu = Menu.buildFromTemplate([
             {
                 label: 'Show App',
@@ -103,7 +138,7 @@ function createTray() {
         tray.setToolTip('StepBank Controller (Prod)');
         tray.setContextMenu(contextMenu);
 
-        // Optional: Double-click on tray icon to show window
+        // Add double-click handler for window access
         tray.on('double-click', () => {
             if (mainWindow) {
                 mainWindow.show();
@@ -112,13 +147,17 @@ function createTray() {
 
     } catch (error) {
         console.error('Error in createTray:', error);
-        // Create window as fallback if tray creation fails
+        // Fallback to window if tray creation fails
         if (mainWindow) {
             mainWindow.show();
         }
     }
 }
 
+/**
+ * Creates main application window for production environment
+ * Loads hosted version of application with security configurations
+ */
 function createWindow() {
     console.log('Creating main window...');
     mainWindow = new BrowserWindow({
@@ -131,13 +170,14 @@ function createWindow() {
         show: false,
     });
 
+    // Load production URL with delay to ensure server readiness
     setTimeout(() => {
         console.log('Loading application from:', APP_URL);
         mainWindow.loadURL(APP_URL);
-        
-        // DevTools disabled in production
+        // DevTools explicitly disabled in production
     }, 1000);
 
+    // Minimize to tray instead of closing
     mainWindow.on('close', (event) => {
         if (!app.isQuitting) {
             event.preventDefault();
@@ -146,7 +186,7 @@ function createWindow() {
     });
 }
 
-// Initialize everything
+// Production application lifecycle events
 app.on('ready', () => {
     console.log('App ready event fired');
     setupServer();
@@ -174,7 +214,7 @@ app.on('before-quit', () => {
     app.isQuitting = true;
 });
 
-// Add error handling
+// Production error handling
 process.on('uncaughtException', (error) => {
     console.error('Uncaught exception:', error);
 });
