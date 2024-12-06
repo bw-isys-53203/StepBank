@@ -1,4 +1,3 @@
-```python
 """
 @fileoverview Smart Plug Control System
 Python script for controlling TP-Link Kasa smart plugs connected to gaming consoles.
@@ -126,4 +125,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
