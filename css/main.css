@@ -1,44 +1,74 @@
-/* main.css */
-:root {
+/**
+* @fileoverview Core Application Styles
+* Defines global variables, resets, and common components used across
+* the application. Sets the foundation for consistent theming and layout.
+* 
+* @revision SB-00001 - 12/06/2024 - Initial Release - Core styling
+*/
+
+/* ==========================================================================
+  Theme Variables
+  ========================================================================== */
+  :root {
+    /* Primary Colors */
     --primary-color: #4CAF50;
-    --dark-bg: #E8F5E9;  /* Light green background */
-    --card-bg: #C8E6C9;  /* Lighter green for cards */
+    --dark-bg: #E8F5E9;      /* Light green background */
+    --card-bg: #C8E6C9;      /* Lighter green for cards */
+    
+    /* Text Colors */
     --text-primary: #2C3E50;
     --text-secondary: #537155;
-    --button-bg: #FFFFFF; /* White for text boxes/buttons */
+    
+    /* Interactive Elements */
+    --button-bg: #FFFFFF;     /* White for text boxes/buttons */
     --button-hover: #43A047;
+    
+    /* Status Colors */
     --error-color: #E57373;
     --success-color: #81C784;
-}
-
-* {
+ }
+ 
+ /* ==========================================================================
+   Global Resets
+   ========================================================================== */
+ * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-
-body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, 
+                 Ubuntu, Cantarell, sans-serif;
+ }
+ 
+ body {
     background-color: var(--dark-bg);
     color: var(--text-primary);
     min-height: 100vh;
-}
-
-.container {
+ }
+ 
+ /* ==========================================================================
+   Layout Components
+   ========================================================================== */
+ .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"],
-.search-input,
-.goal-input,
-.child-selector select {
+ }
+ 
+ /* ==========================================================================
+   Form Elements
+   ========================================================================== */
+ .form-group input[type="text"],
+ .form-group input[type="password"],
+ .search-input,
+ .goal-input,
+ .child-selector select {
     background-color: #FFFFFF;
-}
-
-.btn {
+ }
+ 
+ /* ==========================================================================
+   Button Styles
+   ========================================================================== */
+ .btn {
     padding: 12px 24px;
     background-color: var(--primary-color);
     color: white;
@@ -47,51 +77,44 @@ body {
     cursor: pointer;
     font-weight: bold;
     transition: opacity 0.2s;
-}
-
-.btn:hover {
+ }
+ 
+ .btn:hover {
     opacity: 0.9;
     background-color: var(--button-hover);
-}
-
-.balance-card {
+ }
+ 
+ /* ==========================================================================
+   Card Components
+   ========================================================================== */
+ .balance-card {
     background: linear-gradient(135deg, var(--primary-color), #81C784);
-}
-
-.auth-form, .parent-controls, .child-card, .approval-requests,
-.sparks-info, .metric-card {
+ }
+ 
+ /* Card Shadows */
+ .auth-form, 
+ .parent-controls, 
+ .child-card, 
+ .approval-requests,
+ .sparks-info, 
+ .metric-card {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.progress-ring path {
+ }
+ 
+ /* Progress Indicators */
+ .progress-ring path {
     stroke: var(--primary-color);
-}
-
-.bottom-nav {
+ }
+ 
+ /* ==========================================================================
+   Navigation Components
+   ========================================================================== */
+ .bottom-nav {
     background-color: white;
     box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.hidden {
-    display: none !important;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-.logo-icon {
-    width: 40px;
-    height: 40px;
-    background-color: #FFD700;
-    border-radius: 50%;
-}
-
-.nav {
+ }
+ 
+ .nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -99,9 +122,32 @@ body {
     background-color: var(--card-bg);
     margin-bottom: 30px;
     border-radius: 10px;
-}
-
-.nav-buttons {
+ }
+ 
+ .nav-buttons {
     display: flex;
     gap: 10px;
-}
+ }
+ 
+ /* Logo Styling */
+ .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 24px;
+    font-weight: bold;
+ }
+ 
+ .logo-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #FFD700;
+    border-radius: 50%;
+ }
+ 
+ /* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+ .hidden {
+    display: none !important;
+ }

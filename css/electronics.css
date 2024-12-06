@@ -1,33 +1,48 @@
-/* Base button styles to prevent focus outlines */
-button {
+/**
+* @fileoverview Electronics Interface Styles
+* Handles styling for the electronics time conversion system, device selection,
+* countdown interface, and interactive button states. Includes animations
+* and responsive layouts.
+* 
+* @revision SB-00001 - 12/06/2024 - Initial Release - Electronics interface styling
+*/
+
+/* ==========================================================================
+  Base Button Resets
+  ========================================================================== */
+  button {
     outline: none !important;
     -webkit-tap-highlight-color: transparent;
-}
-
-#electronics button {
+ }
+ 
+ #electronics button {
     outline: none !important;
     -webkit-tap-highlight-color: transparent;
-}
-
-#electronics button:focus,
-#electronics button:active,
-#electronics button:focus-visible {
+ }
+ 
+ #electronics button:focus,
+ #electronics button:active,
+ #electronics button:focus-visible {
     outline: none !important;
     border: none;
     box-shadow: none;
-}
-
-/* Conversion display styles */
-.conversion-display {
+ }
+ 
+ /* ==========================================================================
+   Time Conversion Display
+   ========================================================================== */
+ .conversion-display {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 30px;
     margin: 40px 0;
-}
-
-.currency-circle,
-.time-circle {
+ }
+ 
+ /* Currency and Time Circles
+   ============================================= */
+ .currency-circle,
+ .time-circle {
     width: 150px;
     height: 150px;
     border-radius: 50%;
@@ -37,43 +52,47 @@ button {
     justify-content: center;
     align-items: center;
     padding: 20px;
-}
-
-.equals-sign {
+ }
+ 
+ .equals-sign {
     font-size: 32px;
     color: var(--text-primary);
     font-weight: bold;
-}
-
-.value {
+ }
+ 
+ .value {
     font-size: 28px;
     color: var(--text-primary);
     font-weight: bold;
     margin-bottom: 5px;
-}
-
-.label {
+ }
+ 
+ .label {
     font-size: 14px;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 1px;
-}
-
-/* Devices section styles */
-.devices-section {
+ }
+ 
+ /* ==========================================================================
+   Device Selection Interface
+   ========================================================================== */
+ .devices-section {
     padding: 20px;
     max-width: 600px;
     margin: 0 auto;
-}
-
-.device-grid {
+ }
+ 
+ .device-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
     margin: 30px 0;
-}
-
-.device-option {
+ }
+ 
+ /* Device Option Buttons
+   ============================================= */
+ .device-option {
     padding: 20px;
     background-color: var(--card-bg);
     border: 2px solid transparent;
@@ -82,25 +101,26 @@ button {
     cursor: pointer;
     transition: all 0.3s ease;
     outline: none !important;
-}
-
-.device-option:hover {
+ }
+ 
+ .device-option:hover {
     border-color: var(--primary-color);
-}
-
-.device-option.selected {
+ }
+ 
+ .device-option.selected {
     border-color: var(--primary-color);
     background-color: var(--primary-color);
-}
-
-.device-option:focus,
-.device-option:active {
+ }
+ 
+ .device-option:focus,
+ .device-option:active {
     outline: none !important;
     box-shadow: none;
-}
-
-/* Unlock button styles */
-.unlock-btn {
+ }
+ 
+ /* Unlock Control
+   ============================================= */
+ .unlock-btn {
     width: 100%;
     padding: 15px;
     margin-top: 20px;
@@ -111,31 +131,33 @@ button {
     -moz-appearance: none;
     appearance: none;
     user-select: none;
-}
-
-.unlock-btn.disabled {
+ }
+ 
+ .unlock-btn.disabled {
     opacity: 0.5;
     cursor: not-allowed;
-}
-
-.unlock-btn:focus,
-.unlock-btn:active,
-.unlock-btn:focus-visible {
+ }
+ 
+ .unlock-btn:focus,
+ .unlock-btn:active,
+ .unlock-btn:focus-visible {
     outline: none !important;
     border: none;
     box-shadow: none;
-}
-
-/* Countdown section styles */
-.countdown-section {
+ }
+ 
+ /* ==========================================================================
+   Countdown Interface
+   ========================================================================== */
+ .countdown-section {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 30px;
     padding: 40px 20px;
-}
-
-.countdown-display {
+ }
+ 
+ .countdown-display {
     background-color: var(--card-bg);
     border: 2px solid;
     border-radius: 12px;
@@ -147,46 +169,38 @@ button {
     text-align: center;
     position: relative;
     overflow: hidden;
-}
-
-.countdown-display.countdown-active {
+ }
+ 
+ /* Countdown States
+   ============================================= */
+ .countdown-display.countdown-active {
     color: var(--primary-color);
     border-color: var(--primary-color);
-}
-
-@keyframes pulse {
-    0% {
-        opacity: 0.4;
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0.4;
-    }
-}
-
-@keyframes borderPulse {
-    0% {
-        border-color: rgba(124, 185, 232, 0.4); /* #7CB9E8 with 40% opacity */
-    }
-    50% {
-        border-color: rgba(124, 185, 232, 1); /* #7CB9E8 with 100% opacity */
-    }
-    100% {
-        border-color: rgba(124, 185, 232, 0.4);
-    }
-}
-
-.countdown-display.countdown-transition {
+ }
+ 
+ /* Animation Keyframes */
+ @keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+ }
+ 
+ @keyframes borderPulse {
+    0% { border-color: rgba(124, 185, 232, 0.4); }
+    50% { border-color: rgba(124, 185, 232, 1); }
+    100% { border-color: rgba(124, 185, 232, 0.4); }
+ }
+ 
+ .countdown-display.countdown-transition {
     color: #7CB9E8;
     border-color: #7CB9E8;
     animation: 
         pulse 2s ease-in-out infinite,
         borderPulse 2s ease-in-out infinite;
-}
-
-.countdown-display::before {
+ }
+ 
+ /* Countdown Display Decoration */
+ .countdown-display::before {
     content: '';
     position: absolute;
     top: 0;
@@ -194,9 +208,9 @@ button {
     right: 0;
     height: 2px;
     background: linear-gradient(90deg, transparent, currentColor, transparent);
-}
-
-.time-remaining {
+ }
+ 
+ .time-remaining {
     background-color: var(--card-bg);
     border: 1px solid var(--text-secondary);
     border-radius: 8px;
@@ -206,10 +220,12 @@ button {
     box-shadow: 0 2px 4px rgba(161, 161, 170, 0.1);
     min-width: 250px;
     text-align: center;
-}
-
-/* Stop button styles */
-.stop-btn {
+ }
+ 
+ /* ==========================================================================
+   Control Buttons
+   ========================================================================== */
+ .stop-btn {
     background-color: var(--primary-color);
     margin-top: 10px;
     padding: 15px 30px;
@@ -220,27 +236,29 @@ button {
     transition: transform 0.2s, box-shadow 0.2s;
     outline: none !important;
     border: none;
-}
-
-.stop-btn:hover {
+ }
+ 
+ .stop-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(255, 75, 75, 0.3);
-}
-
-.stop-btn:active {
+ }
+ 
+ .stop-btn:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(255, 75, 75, 0.2);
-}
-
-.stop-btn:focus,
-.stop-btn:focus-visible {
+ }
+ 
+ .stop-btn:focus,
+ .stop-btn:focus-visible {
     outline: none !important;
     border: none;
     box-shadow: 0 4px 6px rgba(255, 75, 75, 0.2);
-}
-
-/* Media queries for responsiveness */
-@media (max-width: 768px) {
+ }
+ 
+ /* ==========================================================================
+   Responsive Layouts
+   ========================================================================== */
+ @media (max-width: 768px) {
     .device-grid {
         grid-template-columns: 1fr;
     }
@@ -255,4 +273,4 @@ button {
         flex-direction: column;
         gap: 20px;
     }
-}
+ }
