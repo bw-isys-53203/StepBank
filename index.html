@@ -1,157 +1,155 @@
+<!-- 
+* @fileoverview Kids Activity Tracker Main Page
+* Central interface for child activity tracking, rewards, and parental controls.
+* Implements authentication, dashboard views, and various activity management interfaces.
+*
+* @revision SB-00001 - 12/06/2024 - Initial Release
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kids Activity Tracker</title>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/auth.css">
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/rewards.css">
-    <link rel="stylesheet" href="css/marketplace.css">
-    <link rel="stylesheet" href="css/electronics.css">
-    <link rel="stylesheet" href="css/settings.css">
-    <link rel="stylesheet" href="css/messages.css">
-    <link rel="stylesheet" type="text/css" href="css/pendingApprovals.css">
-    <link rel="stylesheet" type="text/css" href="css/addChild.css">
-    <link rel="stylesheet" type="text/css" href="css/device.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-database-compat.min.js"></script>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Kids Activity Tracker</title>
+
+   <!-- Core Stylesheets -->
+   <link rel="stylesheet" href="css/main.css">
+   <link rel="stylesheet" href="css/auth.css">
+   <link rel="stylesheet" href="css/dashboard.css">
+   
+   <!-- Feature-Specific Stylesheets -->
+   <link rel="stylesheet" href="css/rewards.css">
+   <link rel="stylesheet" href="css/marketplace.css">
+   <link rel="stylesheet" href="css/electronics.css">
+   <link rel="stylesheet" href="css/settings.css">
+   <link rel="stylesheet" href="css/messages.css">
+   <link rel="stylesheet" type="text/css" href="css/pendingApprovals.css">
+   <link rel="stylesheet" type="text/css" href="css/addChild.css">
+   <link rel="stylesheet" type="text/css" href="css/device.css">
+   
+   <!-- Third-Party Dependencies -->
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/10.8.0/firebase-database-compat.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Auth Section -->
-        <div id="authSection" class="auth-container">
-            <div class="logo">
-                <div class="logo-icon"></div>
-                <span>Kids Activity Tracker</span>
-            </div>
-            <div class="auth-tabs">
-                <div class="auth-tab active" data-tab="login">Login</div>
-                <div class="auth-tab" data-tab="register">Register</div>
-            </div>
-            <div class="auth-form" id="loginForm">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="loginUsername">
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="loginPassword">
-                </div>
-                <button class="btn" onclick="handleLogin()">Login</button>
-            </div>
-            <div class="auth-form hidden" id="registerForm">
-                <div class="form-group">
-                    <label>Choose Username</label>
-                    <input type="text" id="registerUsername">
-                </div>
-                <div class="form-group">
-                    <label>Choose Password</label>
-                    <input type="password" id="registerPassword">
-                </div>
-                <div class="form-group">
-                    <label>Account Type</label>
-                    <select id="accountType" onchange="authManager.handleAccountTypeChange()">
-                        <option value="">Select Account Type</option>
-                        <option value="parent">Parent</option>
-                        <option value="child">Child</option>
-                    </select>
-                </div>
-                <div class="form-group" id="tokenGroup" style="display: none;">
-                    <label>Registration Token</label>
-                    <input type="text" id="registrationToken">
-                </div>
-                <button class="btn" onclick="handleRegister()">Register</button>
-            </div>
-        </div>
+   <div class="container">
+       <!-- Authentication Interface
+            Handles user login, registration, and account type selection -->
+       <div id="authSection" class="auth-container">
+           <!-- Brand Header -->
+           <div class="logo">
+               <div class="logo-icon"></div>
+               <span>Kids Activity Tracker</span>
+           </div>
 
-        <!-- Dashboard Section -->
-        <div id="dashboard" class="dashboard hidden">
-            <!--<nav class="nav">
-                <div class="logo">
-                    <div class="logo-icon"></div>
-                    <span>StepBank</span>
-                </div>
-                <div class="nav-buttons">
-                    <button class="btn" onclick="showSection('rewards')">Rewards</button>
-                    <button class="btn" onclick="showSection('marketplace')">Marketplace</button>
-                    <button class="btn" onclick="handleLogout()">Logout</button>
-                </div>
-            </nav>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalSteps">2,345</div>
-                    <div class="stat-label">Total Steps</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="redeemedPoints">1,230</div>
-                    <div class="stat-label">Redeemed Points</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="availableRewards">5,000+</div>
-                    <div class="stat-label">Available Rewards</div>
-                </div>
-            </div>
-            <canvas id="activityChart"></canvas>-->
-        </div>
-        
-        <!-- Rewards and Marketplace sections will be loaded dynamically -->
-        <div id="pendingApprovals" class="pending-approvals hidden"></div>
-        <div id="children" class="children hidden"></div>
-        <div id="rewards" class="rewards hidden"></div>
-        <div id="electronics" class="electronics hidden"></div>
-        <div id="marketplace" class="marketplace hidden"></div>
-        <div id="device" class="device hidden"></div>
-        <div id="fitbit" class="fitbit hidden"></div>
-        <div id="messages" class="messages hidden"></div>
-	    <div id="settings" class="settings hidden"></div>
-    </div>
+           <!-- Auth Navigation -->
+           <div class="auth-tabs">
+               <div class="auth-tab active" data-tab="login">Login</div>
+               <div class="auth-tab" data-tab="register">Register</div>
+           </div>
 
-    <!-- Scripts -->
-    <script src="js/database.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/sparkCalculator.js"></script>
-    <script src="js/deviceConfig.js"></script>
-    <script src="js/dashboard.js"></script>    
-    <script src="js/pendingApprovals.js"></script>
-    <script src="js/electronics.js"></script>
-    <script src="js/rewards.js"></script>
-    <script src="js/marketplace.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/addChild.js"></script>
-    <script src="js/trackingDevice.js"></script>
-    <script src="js/fitbit.js"></script>
-    <script src="js/messages.js"></script>
-    <!-- Add the auth redirect handler -->
-    <script>
-        console.log('Setting up Fitbit redirect handler...');
-        document.addEventListener('DOMContentLoaded', async () => {
-            
-            if (window.location.search.includes('code=')) {
-                console.log('Found Fitbit auth code in URL');
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const code = urlParams.get('code');
-                    const state = urlParams.get('state');
-                    if (window.fitbitManager) {
-                        await window.fitbitManager.handleAuthRedirect(code, state);
-                        console.log('Auth redirect handled successfully');
-                        // Clean up URL by removing parameters
-                        const cleanUrl = window.location.href.split('?')[0];
-                        window.history.replaceState({}, document.title, cleanUrl);
-                        // Refresh the page to start clean
-                        //window.location.reload();
-                        showSection('device');
-                    } else {
-                        console.error('FitbitManager not initialized');
-                    }
-                } catch (error) {
-                    console.error('Fitbit auth redirect failed:', error);
-                }
-            }
-        });
-    </script>
+           <!-- Login Form -->
+           <div class="auth-form" id="loginForm">
+               <div class="form-group">
+                   <label>Username</label>
+                   <input type="text" id="loginUsername">
+               </div>
+               <div class="form-group">
+                   <label>Password</label>
+                   <input type="password" id="loginPassword">
+               </div>
+               <button class="btn" onclick="handleLogin()">Login</button>
+           </div>
+
+           <!-- Registration Form -->
+           <div class="auth-form hidden" id="registerForm">
+               <div class="form-group">
+                   <label>Choose Username</label>
+                   <input type="text" id="registerUsername">
+               </div>
+               <div class="form-group">
+                   <label>Choose Password</label>
+                   <input type="password" id="registerPassword">
+               </div>
+               <div class="form-group">
+                   <label>Account Type</label>
+                   <select id="accountType" onchange="authManager.handleAccountTypeChange()">
+                       <option value="">Select Account Type</option>
+                       <option value="parent">Parent</option>
+                       <option value="child">Child</option>
+                   </select>
+               </div>
+               <!-- Child Account Registration Token Field - Shown when child account selected -->
+               <div class="form-group" id="tokenGroup" style="display: none;">
+                   <label>Registration Token</label>
+                   <input type="text" id="registrationToken">
+               </div>
+               <button class="btn" onclick="handleRegister()">Register</button>
+           </div>
+       </div>
+
+       <!-- Main Application Sections 
+            Each section is loaded dynamically based on user interactions -->
+       <div id="dashboard" class="dashboard hidden"></div>
+       <div id="pendingApprovals" class="pending-approvals hidden"></div>
+       <div id="children" class="children hidden"></div>
+       <div id="rewards" class="rewards hidden"></div>
+       <div id="electronics" class="electronics hidden"></div>
+       <div id="marketplace" class="marketplace hidden"></div>
+       <div id="device" class="device hidden"></div>
+       <div id="fitbit" class="fitbit hidden"></div>
+       <div id="messages" class="messages hidden"></div>
+       <div id="settings" class="settings hidden"></div>
+   </div>
+
+   <!-- Application Scripts -->
+   <!-- Core Functionality -->
+   <script src="js/database.js"></script>
+   <script src="js/auth.js"></script>
+   <script src="js/sparkCalculator.js"></script>
+   <script src="js/deviceConfig.js"></script>
+   <script src="js/main.js"></script>
+   
+   <!-- Feature-Specific Scripts -->
+   <script src="js/dashboard.js"></script>    
+   <script src="js/pendingApprovals.js"></script>
+   <script src="js/electronics.js"></script>
+   <script src="js/rewards.js"></script>
+   <script src="js/marketplace.js"></script>
+   <script src="js/addChild.js"></script>
+   <script src="js/trackingDevice.js"></script>
+   <script src="js/fitbit.js"></script>
+   <script src="js/messages.js"></script>
+
+   <!-- Fitbit OAuth Handler
+        Manages the OAuth redirect flow for Fitbit device integration -->
+   <script>
+       console.log('Setting up Fitbit redirect handler...');
+       document.addEventListener('DOMContentLoaded', async () => {
+           
+           if (window.location.search.includes('code=')) {
+               console.log('Found Fitbit auth code in URL');
+               try {
+                   const urlParams = new URLSearchParams(window.location.search);
+                   const code = urlParams.get('code');
+                   const state = urlParams.get('state');
+                   if (window.fitbitManager) {
+                       await window.fitbitManager.handleAuthRedirect(code, state);
+                       console.log('Auth redirect handled successfully');
+                       // Clean up URL by removing parameters
+                       const cleanUrl = window.location.href.split('?')[0];
+                       window.history.replaceState({}, document.title, cleanUrl);
+                       showSection('device');
+                   } else {
+                       console.error('FitbitManager not initialized');
+                   }
+               } catch (error) {
+                   console.error('Fitbit auth redirect failed:', error);
+               }
+           }
+       });
+   </script>
 </body>
 </html>
