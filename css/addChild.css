@@ -1,5 +1,15 @@
-/* addChild.css */
-.add-child-container {
+/**
+ * @fileoverview Child Management Interface Styles
+ * Handles styling for child profile creation, listing, and management.
+ * Includes responsive layouts and interactive feedback for user actions.
+ * 
+ * @revision SB-00001 - 12/06/2024 - Initial Release - Child management styling
+ */
+
+/* ==========================================================================
+   Form Container Styles
+   ========================================================================== */
+   .add-child-container {
     padding: 20px;
     margin-bottom: 80px; /* For bottom nav */
 }
@@ -12,6 +22,8 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Form Typography
+   ============================================= */
 .add-child-form-container h2 {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 24px;
@@ -19,6 +31,8 @@
     margin-bottom: 20px;
 }
 
+/* Form Input Groups
+   ============================================= */
 .form-group {
     margin-bottom: 20px;
 }
@@ -40,11 +54,14 @@
     transition: border-color 0.3s;
 }
 
+/* Input States */
 .form-group input:focus {
     border-color: var(--primary-color);
     outline: none;
 }
 
+/* Submit Button Styles
+   ============================================= */
 .submit-btn {
     width: 100%;
     padding: 15px;
@@ -62,6 +79,9 @@
     transform: translateY(-2px);
 }
 
+/* ==========================================================================
+   Children List Display
+   ========================================================================== */
 .children-list-container {
     background-color: var(--card-bg);
     border-radius: 12px;
@@ -76,12 +96,15 @@
     margin-bottom: 20px;
 }
 
+/* Grid Layout */
 .children-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
 }
 
+/* Child Card Components
+   ============================================= */
 .child-card {
     background-color: var(--button-bg);
     padding: 20px;
@@ -93,6 +116,7 @@
     transform: translateY(-2px);
 }
 
+/* Card Header Layout */
 .child-header {
     display: flex;
     justify-content: space-between;
@@ -111,6 +135,7 @@
     color: var(--text-secondary);
 }
 
+/* Card Content Styles */
 .child-details {
     color: var(--text-secondary);
     line-height: 1.6;
@@ -122,6 +147,8 @@
     margin-bottom: 8px;
 }
 
+/* Registration Status Indicators
+   ============================================= */
 .registration-status {
     font-size: 14px;
     padding: 4px 8px;
@@ -151,6 +178,8 @@
     word-break: break-all;
 }
 
+/* Empty State Styles
+   ============================================= */
 .no-children {
     text-align: center;
     padding: 40px;
@@ -161,6 +190,9 @@
     color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   Notification Components
+   ========================================================================== */
 .toast-notification {
     position: fixed;
     bottom: 20px;
@@ -185,7 +217,9 @@
     transform: translateY(0);
 }
 
-/* Responsive styles */
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
 @media (max-width: 768px) {
     .add-child-container {
         padding: 10px;

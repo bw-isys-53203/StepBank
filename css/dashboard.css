@@ -1,13 +1,24 @@
-/* dashboard.css */
+/**
+ * @fileoverview Dashboard Interface Styles
+ * Core styling for both parent and child dashboard views including progress tracking,
+ * metrics display, navigation, and interactive elements. Handles responsive layouts
+ * and state management for all dashboard components.
+ * 
+ * @revision SB-00001 - 12/06/2024 - Initial Release - Dashboard interface styling
+ */
 
-/* Base dashboard container */
-.dashboard {
+/* ==========================================================================
+   Base Layout
+   ========================================================================== */
+   .dashboard {
     padding-bottom: 80px;
     min-height: 100vh;
     position: relative;
 }
 
-/* Parent Dashboard Specific Styles */
+/* ==========================================================================
+   Parent Dashboard Components
+   ========================================================================== */
 .parent-controls {
     background-color: var(--card-bg);
     padding: 20px;
@@ -15,6 +26,8 @@
     margin-bottom: 20px;
 }
 
+/* Child Selection Interface
+   ============================================= */
 .child-selector {
     margin-bottom: 20px;
 }
@@ -28,6 +41,8 @@
     color: var(--text-primary);
 }
 
+/* Goal Configuration
+   ============================================= */
 .goal-settings {
     background-color: var(--button-bg);
     padding: 15px;
@@ -60,6 +75,8 @@
     margin-left: 20px;
 }
 
+/* Children Overview Grid
+   ============================================= */
 .children-overview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -74,6 +91,8 @@
     margin-bottom: 20px;
 }
 
+/* Approval System
+   ============================================= */
 .approval-requests {
     background-color: var(--card-bg);
     padding: 20px;
@@ -112,7 +131,9 @@
     background-color: var(--primary-color);
 }
 
-/* Child Dashboard Specific Styles */
+/* ==========================================================================
+   Child Dashboard Components
+   ========================================================================== */
 .progress-container {
     display: flex;
     justify-content: center;
@@ -120,6 +141,8 @@
     min-height: 220px;
 }
 
+/* Progress Circle
+   ============================================= */
 .spark-circle {
     width: 200px;
     height: 200px;
@@ -131,6 +154,8 @@
     height: 100%;
 }
 
+/* Sparks Display
+   ============================================= */
 .sparks-info {
     text-align: center;
     margin: 20px 0;
@@ -160,7 +185,8 @@
     color: var(--text-primary);
 }
 
-/* Spark circle text */
+/* Progress Circle Text
+   ============================================= */
 .spark-count {
     font-size: 28px;
     fill: var(--text-primary);
@@ -173,6 +199,9 @@
     text-transform: uppercase;
 }
 
+/* ==========================================================================
+   Metrics Display
+   ========================================================================== */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -200,6 +229,8 @@
     text-transform: uppercase;
 }
 
+/* Metric Controls
+   ============================================= */
 .metric-controls {
     display: flex;
     gap: 10px;
@@ -224,6 +255,8 @@
     color: var(--primary-color);
 }
 
+/* Metrics Overview
+   ============================================= */
 .metrics-overview {
     background-color: #FFFFFF;
     border-radius: 12px;
@@ -266,6 +299,9 @@
     color: #666666;
 }
 
+/* ==========================================================================
+   Action Buttons
+   ========================================================================== */
 .action-buttons {
     display: flex;
     justify-content: center;
@@ -295,6 +331,9 @@
     transform: translateY(-2px);
 }
 
+/* ==========================================================================
+   Navigation Components
+   ========================================================================== */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -310,7 +349,8 @@
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Navigation Button */
+/* Navigation Buttons
+   ============================================= */
 .nav-btn {
     display: flex;
     flex-direction: column;
@@ -324,10 +364,10 @@
     transition: color 0.3s;
     padding: 0;
     text-align: center;
-    width: 100%; /* Ensure full width */
+    width: 100%;
 }
 
-/* Icon Container */
+/* Icon Containers */
 .bottom-nav .nav-btn i {
     font-size: 20px;
     line-height: 1;
@@ -337,17 +377,15 @@
     justify-content: center;
 }
 
-/* Text Label */
 .nav-btn span {
     font-size: 12px;
     line-height: 1;
-    display: block; /* Ensure block display */
-    width: 100%; /* Full width */
-    text-align: center; /* Center text */
-    margin-top: 4px; /* Consistent spacing */
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 4px;
 }
 
-/* Icon specific styles */
 .bottom-nav .family-icon,
 .bottom-nav .settings-icon,
 .bottom-nav .message-icon {
@@ -362,7 +400,9 @@
     color: var(--text-primary);
 }
 
-/* Toast Notifications */
+/* ==========================================================================
+   Notification System
+   ========================================================================== */
 .toast-notification {
     position: fixed;
     bottom: 20px;
@@ -383,7 +423,9 @@
     transform: translateY(0);
 }
 
-/* Sparkle Animation */
+/* ==========================================================================
+   Visual Effects
+   ========================================================================== */
 .sparkle-container {
     position: absolute;
     top: 0;
@@ -413,7 +455,9 @@
     }
 }
 
-/* No Data Messages */
+/* ==========================================================================
+   Empty States
+   ========================================================================== */
 .no-data-message {
     text-align: center;
     padding: 2rem;
@@ -464,7 +508,9 @@
     margin-bottom: 1rem;
 }
 
-/* Responsive styles */
+/* ==========================================================================
+   Responsive Layouts
+   ========================================================================== */
 @media (max-width: 768px) {
     .dashboard {
         padding-bottom: 70px;

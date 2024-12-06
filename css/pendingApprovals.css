@@ -1,116 +1,140 @@
-/* pendingApprovals.css */
-.approvals-container {
+/**
+* @fileoverview Pending Approvals Interface Styles
+* Handles styling for approval management including approval cards,
+* item forms, and available items display. Includes responsive layouts
+* for mobile viewing.
+* 
+* @revision SB-00001 - 12/06/2024 - Initial Release - Approvals interface styling
+*/
+
+/* ==========================================================================
+  Container Layout
+  ========================================================================== */
+  .approvals-container {
     padding: 24px;
     max-width: 800px;
     margin: 0 auto;
-}
-
-.approvals-container h2,
-.approvals-container h3 {
+ }
+ 
+ .approvals-container h2,
+ .approvals-container h3 {
     color: var(--text-primary);
     font-size: 24px;
     margin-bottom: 24px;
-}
-
-.approval-list {
+ }
+ 
+ /* ==========================================================================
+   Approval Cards
+   ========================================================================== */
+ .approval-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
-}
-
-.approval-card,
-.pending-section {
+ }
+ 
+ .approval-card,
+ .pending-section {
     background-color: var(--card-bg);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
-}
-
-.approval-header {
+ }
+ 
+ /* Card Header
+   ============================================= */
+ .approval-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
-}
-
-.child-name {
+ }
+ 
+ .child-name {
     font-size: 18px;
     font-weight: 600;
     color: var(--text-primary);
-}
-
-.approval-type {
+ }
+ 
+ .approval-type {
     background-color: var(--primary-color);
     color: white;
     padding: 4px 12px;
     border-radius: 16px;
     font-size: 14px;
-}
-
-.approval-details {
+ }
+ 
+ /* Approval Content
+   ============================================= */
+ .approval-details {
     margin-bottom: 20px;
-}
-
-.approval-amount {
+ }
+ 
+ .approval-amount {
     font-size: 24px;
     color: var(--text-primary);
     font-weight: 500;
     display: block;
     margin-bottom: 8px;
-}
-
-.approval-time {
+ }
+ 
+ .approval-time {
     color: var(--text-secondary);
     font-size: 14px;
-}
-
-.approval-actions {
+ }
+ 
+ /* Action Buttons
+   ============================================= */
+ .approval-actions {
     display: flex;
     gap: 12px;
-}
-
-.approve-btn {
+ }
+ 
+ .approve-btn {
     background-color: var(--primary-color);
-}
-
-.deny-btn {
+ }
+ 
+ .deny-btn {
     background-color: var(--error-color);
-}
-
-.no-approvals {
+ }
+ 
+ /* Empty State
+   ============================================= */
+ .no-approvals {
     text-align: center;
     padding: 48px;
     background-color: var(--card-bg);
     border-radius: 12px;
-}
-
-.no-approvals-message {
+ }
+ 
+ .no-approvals-message {
     color: var(--text-secondary);
     font-size: 18px;
-}
-
-/* New styles for add item form */
-.add-item-form {
+ }
+ 
+ /* ==========================================================================
+   Add Item Form
+   ========================================================================== */
+ .add-item-form {
     background-color: var(--card-bg);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
-}
-
-.form-group {
+ }
+ 
+ .form-group {
     margin-bottom: 16px;
-}
-
-.form-group label {
+ }
+ 
+ .form-group label {
     display: block;
     margin-bottom: 8px;
     color: var(--text-primary);
     font-weight: 500;
-}
-
-.form-input {
+ }
+ 
+ .form-input {
     width: 100%;
     padding: 12px;
     background-color: var(--button-bg);
@@ -118,36 +142,40 @@
     border-radius: 8px;
     color: var(--text-primary);
     transition: border-color 0.3s ease;
-}
-
-.form-input:focus {
+ }
+ 
+ .form-input:focus {
     outline: none;
     border-color: var(--primary-color);
-}
-
-.spark-conversion {
+ }
+ 
+ .spark-conversion {
     margin-top: 8px;
     color: var(--primary-color);
     font-size: 14px;
     font-weight: 500;
-}
-
-/* Available items section */
-.available-items {
+ }
+ 
+ /* ==========================================================================
+   Available Items Display
+   ========================================================================== */
+ .available-items {
     background-color: var(--card-bg);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.items-grid {
+ }
+ 
+ .items-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
     margin-top: 16px;
-}
-
-.item-card {
+ }
+ 
+ /* Item Cards
+   ============================================= */
+ .item-card {
     background-color: var(--button-bg);
     padding: 16px;
     border-radius: 8px;
@@ -155,25 +183,25 @@
     justify-content: space-between;
     align-items: center;
     transition: transform 0.2s ease;
-}
-
-.item-card:hover {
+ }
+ 
+ .item-card:hover {
     transform: translateY(-2px);
-}
-
-.item-details h4 {
+ }
+ 
+ .item-details h4 {
     margin: 0 0 4px 0;
     color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
-}
-
-.item-value {
+ }
+ 
+ .item-value {
     color: var(--text-secondary);
     font-size: 14px;
-}
-
-.remove-btn {
+ }
+ 
+ .remove-btn {
     background-color: var(--error-color);
     color: white;
     padding: 8px 16px;
@@ -181,13 +209,16 @@
     border: none;
     cursor: pointer;
     transition: opacity 0.2s;
-}
-
-.remove-btn:hover {
+ }
+ 
+ .remove-btn:hover {
     opacity: 0.9;
-}
-
-@media (max-width: 768px) {
+ }
+ 
+ /* ==========================================================================
+   Responsive Layouts
+   ========================================================================== */
+ @media (max-width: 768px) {
     .approvals-container {
         padding: 16px;
     }
@@ -205,4 +236,4 @@
     .approval-actions {
         flex-direction: column;
     }
-}
+ }

@@ -1,59 +1,77 @@
-/* rewards.css */
-.rewards {
-    animation: slideIn 0.3s ease;
-}
+/**
+* @fileoverview Rewards Interface Styles
+* Handles styling for rewards display, redemption cards, balance tracking,
+* and approval modals. Includes animations and responsive layouts.
+* 
+* @revision SB-00001 - 12/06/2024 - Initial Release - Rewards interface styling
+*/
 
-.rewards-header {
+/* ==========================================================================
+  Base Container & Animations
+  ========================================================================== */
+  .rewards {
+    animation: slideIn 0.3s ease;
+ }
+ 
+ .rewards-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-}
-
-.balance-card {
+ }
+ 
+ /* ==========================================================================
+   Balance Display
+   ========================================================================== */
+ .balance-card {
     background: linear-gradient(135deg, var(--primary-color), #FF8F8F);
     padding: 25px;
     border-radius: 15px;
     color: white;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px rgba(255, 75, 75, 0.2);
-}
-
-.balance-label {
+ }
+ 
+ .balance-label {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 1px;
     opacity: 0.9;
-}
-
-.balance-value {
+ }
+ 
+ .balance-value {
     font-size: 40px;
     font-weight: bold;
     margin: 10px 0;
-}
-
-.rewards-section {
+ }
+ 
+ /* ==========================================================================
+   Rewards Display
+   ========================================================================== */
+ .rewards-section {
     background-color: var(--card-bg);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 30px;
-}
-
-.rewards-section-title {
+ }
+ 
+ .rewards-section-title {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 20px;
     color: var(--text-primary);
-}
-
-.rewards-grid {
+ }
+ 
+ .rewards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     margin-bottom: 20px;
-}
-
-.reward-card {
+ }
+ 
+ /* Reward Cards
+   ============================================= */
+ .reward-card {
     background-color: var(--button-bg);
     border-radius: 10px;
     padding: 20px;
@@ -61,13 +79,13 @@
     cursor: pointer;
     position: relative;
     overflow: hidden;
-}
-
-.reward-card:hover {
+ }
+ 
+ .reward-card:hover {
     transform: translateY(-2px);
-}
-
-.reward-card::before {
+ }
+ 
+ .reward-card::before {
     content: '';
     position: absolute;
     top: 0;
@@ -75,44 +93,46 @@
     width: 100%;
     height: 4px;
     background: linear-gradient(90deg, var(--primary-color), #FF8F8F);
-}
-
-.reward-title {
+ }
+ 
+ .reward-title {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 10px;
     color: var(--text-primary);
-}
-
-.reward-description {
+ }
+ 
+ .reward-description {
     color: var(--text-secondary);
     margin-bottom: 15px;
     font-size: 14px;
     line-height: 1.4;
-}
-
-.reward-cost {
+ }
+ 
+ .reward-cost {
     display: flex;
     align-items: center;
     gap: 8px;
     color: var(--primary-color);
     font-weight: bold;
-}
-
-.reward-actions {
+ }
+ 
+ /* Card Actions
+   ============================================= */
+ .reward-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-top: 15px;
-}
-
-.redeem-btn {
+ }
+ 
+ .redeem-btn {
     padding: 8px 16px;
     border-radius: 6px;
     font-size: 14px;
-}
-
-.pending-approval {
+ }
+ 
+ .pending-approval {
     background-color: rgba(255, 75, 75, 0.1);
     border: 1px solid var(--primary-color);
     padding: 8px;
@@ -121,10 +141,12 @@
     color: var(--primary-color);
     text-align: center;
     margin-top: 10px;
-}
-
-/* Parent Approval Modal */
-.approval-modal {
+ }
+ 
+ /* ==========================================================================
+   Approval Modal
+   ========================================================================== */
+ .approval-modal {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -137,14 +159,15 @@
     z-index: 1000;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
     display: none;
-}
-
-.approval-modal.visible {
+ }
+ 
+ .approval-modal.visible {
     display: block;
     animation: modalFadeIn 0.3s ease;
-}
-
-.modal-overlay {
+ }
+ 
+ /* Modal Overlay */
+ .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -153,33 +176,38 @@
     background-color: rgba(0, 0, 0, 0.7);
     z-index: 999;
     display: none;
-}
-
-.modal-overlay.visible {
+ }
+ 
+ .modal-overlay.visible {
     display: block;
-}
-
-.modal-header {
+ }
+ 
+ /* Modal Content
+   ============================================= */
+ .modal-header {
     margin-bottom: 20px;
-}
-
-.modal-title {
+ }
+ 
+ .modal-title {
     font-size: 24px;
     font-weight: bold;
     color: var(--text-primary);
-}
-
-.modal-content {
+ }
+ 
+ .modal-content {
     margin-bottom: 25px;
-}
-
-.modal-actions {
+ }
+ 
+ .modal-actions {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
-}
-
-@keyframes slideIn {
+ }
+ 
+ /* ==========================================================================
+   Animations
+   ========================================================================== */
+ @keyframes slideIn {
     from {
         opacity: 0;
         transform: translateX(20px);
@@ -188,9 +216,9 @@
         opacity: 1;
         transform: translateX(0);
     }
-}
-
-@keyframes modalFadeIn {
+ }
+ 
+ @keyframes modalFadeIn {
     from {
         opacity: 0;
         transform: translate(-50%, -40%);
@@ -199,9 +227,12 @@
         opacity: 1;
         transform: translate(-50%, -50%);
     }
-}
-
-@media (max-width: 768px) {
+ }
+ 
+ /* ==========================================================================
+   Responsive Layouts
+   ========================================================================== */
+ @media (max-width: 768px) {
     .rewards-grid {
         grid-template-columns: 1fr;
     }
@@ -214,4 +245,4 @@
     .balance-value {
         font-size: 32px;
     }
-}
+ }

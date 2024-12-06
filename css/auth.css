@@ -1,15 +1,27 @@
-/* auth.css */
-.auth-container {
+/**
+* @fileoverview Authentication Interface Styles
+* Handles styling for login and registration forms including
+* tab navigation, form inputs, and error states.
+* 
+* @revision SB-00001 - 12/06/2024 - Initial Release - Authentication styling
+*/
+
+/* ==========================================================================
+  Container Layout
+  ========================================================================== */
+  .auth-container {
     max-width: 400px;
     margin: 50px auto;
-}
-
-.auth-tabs {
+ }
+ 
+ /* Tab Navigation
+   ============================================= */
+ .auth-tabs {
     display: flex;
     margin-bottom: 20px;
-}
-
-.auth-tab {
+ }
+ 
+ .auth-tab {
     flex: 1;
     padding: 10px;
     text-align: center;
@@ -17,36 +29,43 @@
     border-bottom: 2px solid transparent;
     color: var(--text-secondary);
     transition: all 0.3s ease;
-}
-
-.auth-tab:hover {
+ }
+ 
+ /* Tab States */
+ .auth-tab:hover {
     color: var(--text-primary);
-}
-
-.auth-tab.active {
+ }
+ 
+ .auth-tab.active {
     color: var(--text-primary);
     border-bottom-color: var(--primary-color);
-}
-
-.auth-form {
+ }
+ 
+ /* ==========================================================================
+   Form Container
+   ========================================================================== */
+ .auth-form {
     background-color: var(--card-bg);
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
+ }
+ 
+ /* Form Elements
+   ============================================= */
+ .form-group {
     margin-bottom: 20px;
-}
-
-.form-group label {
+ }
+ 
+ .form-group label {
     display: block;
     margin-bottom: 8px;
     color: var(--text-secondary);
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"] {
+ }
+ 
+ /* Text Input Styling */
+ .form-group input[type="text"],
+ .form-group input[type="password"] {
     width: 100%;
     padding: 12px;
     background-color: var(--button-bg);
@@ -54,56 +73,65 @@
     border-radius: 6px;
     color: var(--text-primary);
     transition: border-color 0.3s ease;
-}
-
-.form-group input:focus {
+ }
+ 
+ .form-group input:focus {
     outline: none;
     border-color: var(--primary-color);
-}
-
-.checkbox-label {
+ }
+ 
+ /* Checkbox Styling */
+ .checkbox-label {
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"] {
+ }
+ 
+ .checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;
     cursor: pointer;
-}
-
-.auth-form .btn {
-    width: 100%;
-    margin-top: 10px;
-}
-
-.auth-error {
-    color: var(--primary-color);
-    font-size: 14px;
-    margin-top: 8px;
-    display: none;
-}
-
-.auth-error.visible {
-    display: block;
-}
-
-.auth-form select {
+ }
+ 
+ /* Select Input Styling */
+ .auth-form select {
     width: 100%;
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     background-color: white;
     font-size: 14px;
-}
-
-.auth-form select:focus {
+ }
+ 
+ .auth-form select:focus {
     outline: none;
     border-color: var(--primary-color);
-}
-
-#tokenGroup {
+ }
+ 
+ /* Button Layout */
+ .auth-form .btn {
+    width: 100%;
+    margin-top: 10px;
+ }
+ 
+ /* ==========================================================================
+   Error States
+   ========================================================================== */
+ .auth-error {
+    color: var(--primary-color);
+    font-size: 14px;
+    margin-top: 8px;
+    display: none;
+ }
+ 
+ .auth-error.visible {
+    display: block;
+ }
+ 
+ /* ==========================================================================
+   Animation States
+   ========================================================================== */
+ #tokenGroup {
     transition: all 0.3s ease;
-}
+ }
